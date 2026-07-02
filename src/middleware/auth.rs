@@ -28,7 +28,16 @@ pub async fn authenticate(
         .verify_access_token(token)
         .map_err(|_| AppError::Unauthorized("Invalid access token".into()))?;
 
-    request.extensions_mut().insert(claims);
+    let user_id = claims.sub;
+
+    let context = state
+        .services
+        .authorization
+        .permission_context(user_id)
+        .await
+        .map_err(|_| AppError::Unauthorized("Unauthorized".into()))?;
+
+    request.extensions_mut().insert(context);
 
     Ok(next.run(request).await)
 }

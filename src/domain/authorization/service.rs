@@ -10,10 +10,13 @@ use crate::domain::authorization::{
 };
 
 #[async_trait]
+#[async_trait]
 pub trait AuthorizationService: Send + Sync {
-    async fn authorize(&self, request: AuthorizeRequest) -> Result<AuthorizeResponse>;
+    async fn authorize(&self, request: AuthorizeRequest) -> anyhow::Result<AuthorizeResponse>;
 
-    async fn current_user(&self, user_id: u64) -> Result<CurrentUser>;
+    async fn current_user(&self, user_id: u64) -> anyhow::Result<CurrentUser>;
+
+    async fn permission_context(&self, user_id: u64) -> anyhow::Result<PermissionContext>;
 }
 
 pub struct DefaultAuthorizationService {
@@ -69,5 +72,9 @@ impl AuthorizationService for DefaultAuthorizationService {
 
             permissions: authorize.context.permissions,
         })
+    }
+
+    async fn permission_context(&self, user_id: u64) -> Result<PermissionContext> {
+        Ok(self.authorize(AuthorizeRequest { user_id }).await?.context)
     }
 }

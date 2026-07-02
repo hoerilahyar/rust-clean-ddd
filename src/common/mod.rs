@@ -1,6 +1,7 @@
 pub mod constants;
 pub mod dto;
 pub mod error;
+pub mod extractor;
 pub mod pagination;
 pub mod response;
 pub mod traits;

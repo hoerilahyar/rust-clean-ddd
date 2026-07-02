@@ -1,11 +1,18 @@
-use std::{future::Future, pin::Pin};
-
-use axum::{extract::Request, middleware::Next, response::Response};
+use axum::{
+    extract::Request,
+    middleware::{self, FromFnLayer, Next},
+    response::Response,
+};
 
 use crate::{
+    bootstrap::state::AppState,
     common::error::app_error::AppError,
     domain::{authorization::entity::PermissionContext, permission::entity::PermissionCode},
 };
+
+pub fn layer(state: AppState, permission: PermissionCode) -> FromFnLayer<impl Clone, AppState, ()> {
+    middleware::from_fn_with_state(state, move |request, next| check(permission, request, next))
+}
 
 async fn check(
     permission: PermissionCode,
@@ -15,18 +22,11 @@ async fn check(
     let context = request
         .extensions()
         .get::<PermissionContext>()
-        .ok_or_else(|| AppError::Unauthorized("Unauthorized".to_string()))?;
+        .ok_or_else(|| AppError::Unauthorized("Unauthorized".into()))?;
 
     if context.permissions.iter().any(|p| p == permission.as_str()) {
         return Ok(next.run(request).await);
     }
 
-    Err(AppError::Forbidden("Permission denied".to_string()))
-}
-
-pub fn require(
-    permission: PermissionCode,
-) -> impl Clone + Fn(Request, Next) -> Pin<Box<dyn Future<Output = Result<Response, AppError>> + Send>>
-{
-    move |request, next| Box::pin(check(permission, request, next))
+    Err(AppError::Forbidden("Permission denied".into()))
 }

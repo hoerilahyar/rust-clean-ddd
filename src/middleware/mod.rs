@@ -4,6 +4,7 @@ pub mod compression;
 pub mod cors;
 pub mod logging;
 pub mod permission;
+pub mod permission_layer;
 pub mod rate_limit;
 pub mod recovery;
 pub mod request_id;
