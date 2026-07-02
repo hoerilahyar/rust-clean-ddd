@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 
 use crate::{
-    bootstrap::state::{AppState, Services},
+    bootstrap::state::{AppState, Infrastructure, Services},
     config::Config,
     domain::{
         auth::{repository::mysql_repository::MySqlAuthRepository, service::DefaultAuthService},
@@ -52,16 +52,17 @@ pub async fn build_state() -> Result<AppState> {
     let user_role_service = Arc::new(DefaultUserRoleService::new(user_role_repo));
     let authorization_service = Arc::new(DefaultAuthorizationService::new(authorization_repo));
 
+    let infra = Infrastructure {
+        db,
+        redis,
+        storage,
+        jwt,
+    };
+
     Ok(AppState {
         config: Arc::new(config),
 
-        db,
-
-        redis,
-
-        storage,
-
-        jwt,
+        infra,
 
         services: Services {
             auth: auth_service,

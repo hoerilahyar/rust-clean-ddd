@@ -24,6 +24,7 @@ pub async fn authenticate(
         .ok_or_else(|| AppError::Unauthorized("Missing bearer token".into()))?;
 
     let claims: AccessClaims = state
+        .infra
         .jwt
         .verify_access_token(token)
         .map_err(|_| AppError::Unauthorized("Invalid access token".into()))?;

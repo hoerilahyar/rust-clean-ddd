@@ -7,17 +7,25 @@ use validator::Validate;
 
 use crate::{
     bootstrap::state::AppState,
-    common::{error::app_error::AppError, response::api_response::ApiResponse},
-    domain::permission::dto::{
-        CreatePermissionRequest, GetPermissionRequest, ListPermissionRequest,
-        PermissionListResponse, PermissionResponse, UpdatePermissionRequest,
+    common::{
+        error::app_error::AppError, extractor::CurrentUser, response::api_response::ApiResponse,
+    },
+    domain::permission::{
+        dto::{
+            CreatePermissionRequest, GetPermissionRequest, ListPermissionRequest,
+            PermissionListResponse, PermissionResponse, UpdatePermissionRequest,
+        },
+        entity::PermissionCode,
     },
 };
 
 pub async fn create(
+    current_user: CurrentUser,
     State(state): State<AppState>,
     Json(request): Json<CreatePermissionRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<u64>>), AppError> {
+    current_user.require(PermissionCode::PermissionCreate)?;
+
     request
         .validate()
         .map_err(|e| AppError::Validation(vec![("request".into(), e.to_string())]))?;

@@ -8,7 +8,7 @@ pub async fn run() -> Result<()> {
     let state = dependency::build_state().await?;
 
     info!("Running database migration...");
-    migration::run(&state.db).await?;
+    migration::run(&state.infra.db).await?;
 
     info!("Starting HTTP server...");
     server::start(state).await?;

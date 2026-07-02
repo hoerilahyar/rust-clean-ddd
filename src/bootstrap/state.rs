@@ -15,6 +15,14 @@ use crate::{
 };
 
 #[derive(Clone)]
+pub struct Infrastructure {
+    pub db: MySqlPool,
+    pub redis: ConnectionManager,
+    pub storage: Arc<Uploader>,
+    pub jwt: Arc<JwtService>,
+}
+
+#[derive(Clone)]
 pub struct Services {
     pub auth: Arc<dyn AuthService>,
     pub user: Arc<dyn UserService>,
@@ -28,10 +36,7 @@ pub struct Services {
 #[derive(Clone)]
 pub struct AppState {
     pub config: Arc<Config>,
-    pub db: MySqlPool,
-    pub redis: ConnectionManager,
-    pub storage: Arc<Uploader>,
-    pub jwt: Arc<JwtService>,
+    pub infra: Infrastructure,
 
     pub services: Services,
 }
