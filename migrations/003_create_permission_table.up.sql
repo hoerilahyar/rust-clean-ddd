@@ -1,0 +1,20 @@
+CREATE TABLE permissions (
+
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    resource VARCHAR(100) NOT NULL,
+
+    action VARCHAR(50) NOT NULL,
+
+    slug VARCHAR(150) NOT NULL UNIQUE,
+
+    description TEXT,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE(resource,action)
+
+);

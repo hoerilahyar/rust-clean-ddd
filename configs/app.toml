@@ -1,0 +1,62 @@
+[app]
+name = "Rust Clean API"
+version = "1.0.0"
+host = "0.0.0.0"
+port = 8080
+timezone = "Asia/Jakarta"
+debug = false
+
+[database]
+driver = "mysql"
+max_connections = 20
+min_connections = 5
+connect_timeout = 10
+idle_timeout = 300
+max_lifetime = 1800
+acquire_timeout = 30
+log_sql = false
+
+[redis]
+database = 0
+pool_size = 20
+
+[jwt]
+issuer = "rust-clean-api"
+access_token_expired = 900
+refresh_token_expired = 604800
+
+[http]
+read_timeout = 30
+write_timeout = 30
+shutdown_timeout = 15
+
+[cors]
+allow_credentials = true
+allow_origin = "*"
+allow_methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+allow_headers = ["*"]
+
+[pagination]
+default_page = 1
+default_limit = 10
+max_limit = 100
+
+[logger]
+level = "info"
+format = "json"
+
+[upload]
+max_size = 10485760
+allowed_extensions = ["jpg", "jpeg", "png", "pdf"]
+
+[storage]
+driver = "local"
+local_path = "./uploads"
+base_url = "http://localhost:8080/uploads"
+bucket = ""
+
+[audit]
+enabled = true
+
+[swagger]
+enabled = false
