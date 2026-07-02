@@ -6,9 +6,10 @@ use sqlx::MySqlPool;
 use crate::{
     config::Config,
     domain::{
-        auth::service::AuthService, permission::service::PermissionService,
-        role::service::RoleService, role_permission::service::RolePermissionService,
-        user::service::UserService, user_role::service::UserRoleService,
+        auth::service::AuthService, authorization::service::AuthorizationService,
+        permission::service::PermissionService, role::service::RoleService,
+        role_permission::service::RolePermissionService, user::service::UserService,
+        user_role::service::UserRoleService,
     },
     infrastructure::{security::JwtService, storage::Uploader},
 };
@@ -21,6 +22,7 @@ pub struct Services {
     pub permission: Arc<dyn PermissionService>,
     pub role_permission: Arc<dyn RolePermissionService>,
     pub user_role: Arc<dyn UserRoleService>,
+    pub authorization: Arc<dyn AuthorizationService>,
 }
 
 #[derive(Clone)]

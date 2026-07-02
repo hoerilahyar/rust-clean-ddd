@@ -2,7 +2,7 @@ use axum::Router;
 
 use crate::{
     bootstrap::state::AppState,
-    domain::{auth, role, user},
+    domain::{auth, authorization, role, user},
 };
 
 pub fn routes() -> Router<AppState> {
@@ -10,4 +10,5 @@ pub fn routes() -> Router<AppState> {
         .nest("/auth", auth::routes::routes())
         .nest("/users", user::routes::routes())
         .nest("/roles", role::routes::router())
+        .nest("/authorize", authorization::routes::router())
 }

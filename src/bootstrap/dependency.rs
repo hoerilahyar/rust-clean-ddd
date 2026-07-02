@@ -7,6 +7,9 @@ use crate::{
     config::Config,
     domain::{
         auth::{repository::mysql_repository::MySqlAuthRepository, service::DefaultAuthService},
+        authorization::{
+            repository::MySqlAuthorizationRepository, service::DefaultAuthorizationService,
+        },
         permission::{repository::MySqlPermissionRepository, service::DefaultPermissionService},
         role::{repository::MySqlRoleRepository, service::DefaultRoleService},
         role_permission::{
@@ -35,6 +38,7 @@ pub async fn build_state() -> Result<AppState> {
     let permission_repo = Arc::new(MySqlPermissionRepository::new(Arc::new(db.clone())));
     let role_permission_repo = Arc::new(MySqlRolePermissionRepository::new(Arc::new(db.clone())));
     let user_role_repo = Arc::new(MySqlUserRoleRepository::new(Arc::new(db.clone())));
+    let authorization_repo = Arc::new(MySqlAuthorizationRepository::new(Arc::new(db.clone())));
 
     // infrastructure service
     let jwt = Arc::new(JwtService::new(&config));
@@ -46,6 +50,7 @@ pub async fn build_state() -> Result<AppState> {
     let permission_service = Arc::new(DefaultPermissionService::new(permission_repo));
     let role_permission_service = Arc::new(DefaultRolePermissionService::new(role_permission_repo));
     let user_role_service = Arc::new(DefaultUserRoleService::new(user_role_repo));
+    let authorization_service = Arc::new(DefaultAuthorizationService::new(authorization_repo));
 
     Ok(AppState {
         config: Arc::new(config),
@@ -65,6 +70,7 @@ pub async fn build_state() -> Result<AppState> {
             permission: permission_service,
             role_permission: role_permission_service,
             user_role: user_role_service,
+            authorization: authorization_service,
         },
     })
 }
