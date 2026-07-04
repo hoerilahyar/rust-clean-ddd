@@ -5,9 +5,12 @@ use crate::{
     domain::{auth, authorization, role, user},
 };
 
-pub fn routes() -> Router<AppState> {
+pub fn public_routes() -> Router<AppState> {
+    Router::new().nest("/auth", auth::routes::routes())
+}
+
+pub fn protected_routes() -> Router<AppState> {
     Router::new()
-        .nest("/auth", auth::routes::routes())
         .nest("/users", user::routes::routes())
         .nest("/roles", role::routes::router())
         .nest("/authorize", authorization::routes::router())

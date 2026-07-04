@@ -83,7 +83,7 @@ impl AuthRepository for MySqlAuthRepository {
             SELECT
                 r.id,
                 r.name,
-                r.slug,
+                r.code AS slug,
                 r.description,
                 r.is_active,
                 r.created_at,
@@ -123,7 +123,7 @@ impl AuthRepository for MySqlAuthRepository {
                 p.id,
                 p.resource,
                 p.action,
-                p.slug,
+                p.code AS slug,
                 p.description,
                 p.created_at,
                 p.updated_at

@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use anyhow::Result;
 use tokio::net::TcpListener;
 
@@ -11,7 +13,11 @@ pub async fn start(state: AppState) -> Result<()> {
 
     println!("Server running on http://{}:{}", host, port);
 
-    axum::serve(listener, create_router(state)).await?;
+    axum::serve(
+        listener,
+        create_router(state).into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
 
     Ok(())
 }

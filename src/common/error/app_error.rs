@@ -3,8 +3,9 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use tracing::error;
 
-use crate::common::error::error_response::ErrorResponse;
+use crate::common::error::error_response::{ErrorResponse, ValidationError};
 
 #[derive(Debug)]
 pub enum AppError {
@@ -25,30 +26,51 @@ pub enum AppError {
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        match self {
-            AppError::BadRequest(message) => (
-                StatusCode::BAD_REQUEST,
-                Json(ErrorResponse {
-                    success: false,
+        let (status, message, errors) = match self {
+            AppError::BadRequest(message) => (StatusCode::BAD_REQUEST, message, vec![]),
 
-                    message,
+            AppError::Unauthorized(message) => (StatusCode::UNAUTHORIZED, message, vec![]),
 
-                    errors: vec![],
-                }),
-            )
-                .into_response(),
+            AppError::Forbidden(message) => (StatusCode::FORBIDDEN, message, vec![]),
 
-            _ => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    success: false,
+            AppError::NotFound(message) => (StatusCode::NOT_FOUND, message, vec![]),
 
-                    message: "Internal Server Error".to_string(),
+            AppError::Conflict(message) => (StatusCode::CONFLICT, message, vec![]),
 
-                    errors: vec![],
-                }),
-            )
-                .into_response(),
-        }
+            AppError::Validation(fields) => {
+                let errors = fields
+                    .into_iter()
+                    .map(|(field, message)| ValidationError { field, message })
+                    .collect();
+
+                (
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "Validation error".to_string(),
+                    errors,
+                )
+            }
+
+            AppError::Internal(message) => {
+                // Log pesan error asli agar terlihat di terminal/log,
+                // tapi jangan bocorkan detailnya ke response client.
+                error!("Internal server error: {message}");
+
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Internal Server Error".to_string(),
+                    vec![],
+                )
+            }
+        };
+
+        (
+            status,
+            Json(ErrorResponse {
+                success: false,
+                message,
+                errors,
+            }),
+        )
+            .into_response()
     }
 }
