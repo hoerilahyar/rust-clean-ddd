@@ -1,9 +1,10 @@
 use serde::Serialize;
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ApiResponse<T>
 where
-    T: Serialize,
+    T: Serialize + ToSchema,
 {
     pub success: bool,
     pub message: String,
@@ -12,7 +13,7 @@ where
 
 impl<T> ApiResponse<T>
 where
-    T: Serialize,
+    T: Serialize + ToSchema,
 {
     pub fn success(data: T, message: impl Into<String>) -> Self {
         Self {

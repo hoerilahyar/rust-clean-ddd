@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use redis::aio::ConnectionManager;
 use sqlx::MySqlPool;
 
 use crate::{
@@ -11,14 +10,14 @@ use crate::{
         role_permission::service::RolePermissionService, user::service::UserService,
         user_role::service::UserRoleService,
     },
-    infrastructure::{security::JwtService, storage::Uploader},
+    infrastructure::security::JwtService,
 };
 
 #[derive(Clone)]
 pub struct Infrastructure {
     pub db: MySqlPool,
-    pub redis: ConnectionManager,
-    pub storage: Arc<Uploader>,
+    // pub redis: ConnectionManager,
+    // pub storage: Arc<Uploader>,
     pub jwt: Arc<JwtService>,
 }
 

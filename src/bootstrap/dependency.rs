@@ -17,7 +17,7 @@ use crate::{
         },
         user_role::{repository::MySqlUserRoleRepository, service::DefaultUserRoleService},
     },
-    infrastructure::{cache, database, security::JwtService, storage::Uploader},
+    infrastructure::{database, security::JwtService},
 };
 
 use crate::domain::user::{repository::MySqlUserRepository, service::DefaultUserService};
@@ -27,9 +27,9 @@ pub async fn build_state() -> Result<AppState> {
 
     let db = database::connect(&config).await?;
 
-    let redis = cache::redis::connect(&config).await?;
+    // let redis = cache::redis::connect(&config).await?;
 
-    let storage = Arc::new(Uploader::new(&config));
+    // let storage = Arc::new(Uploader::new(&config));
 
     // repository
     let auth_repository = Arc::new(MySqlAuthRepository::new(db.clone()));
@@ -54,8 +54,8 @@ pub async fn build_state() -> Result<AppState> {
 
     let infra = Infrastructure {
         db,
-        redis,
-        storage,
+        // redis,
+        // storage,
         jwt,
     };
 

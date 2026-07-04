@@ -5,6 +5,23 @@ use crate::{
     common::{error::app_error::AppError, response::api_response::ApiResponse},
     domain::authorization::dto::CurrentUser,
 };
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/authorize/me",
+    tag = "Authorization",
+    responses(
+        (
+            status = 200,
+            description = "Current user retrieved successfully",
+            body = ApiResponse<CurrentUser>
+        ),
+        (
+            status = 401,
+            description = "Unauthorized"
+        )
+    )
+)]
 pub async fn me(
     State(state): State<AppState>,
 ) -> Result<(StatusCode, Json<ApiResponse<CurrentUser>>), AppError> {

@@ -6,3 +6,4 @@ pub mod helper;
 pub mod infrastructure;
 pub mod middleware;
 pub mod routes;
+pub mod swagger;

@@ -8,9 +8,22 @@ use validator::Validate;
 use crate::{
     bootstrap::state::AppState,
     common::{error::app_error::AppError, response::api_response::ApiResponse},
-    domain::auth::dto::{LoginRequest, LoginResponse, RefreshTokenRequest, RefreshTokenResponse},
+    domain::auth::dto::{
+        LoginRequest, LoginResponse, LogoutAllRequest, RefreshTokenRequest, RefreshTokenResponse,
+    },
 };
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/login",
+    tag = "Authentication",
+    request_body = LoginRequest,
+    responses(
+        (status = 200, description = "Login successful", body = LoginResponse),
+        (status = 400, description = "Validation error"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
 pub async fn login(
     State(state): State<AppState>,
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
@@ -41,6 +54,17 @@ pub async fn login(
     ))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/refresh",
+    tag = "Authentication",
+    request_body = RefreshTokenRequest,
+    responses(
+        (status = 200, description = "Refresh token successful", body = RefreshTokenResponse),
+        (status = 400, description = "Validation error"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
 pub async fn refresh_token(
     State(state): State<AppState>,
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
@@ -71,6 +95,16 @@ pub async fn refresh_token(
     ))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/logout",
+    tag = "Authentication",
+    responses(
+        (status = 200, description = "Logout successful"),
+        (status = 400, description = "Validation error"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
 pub async fn logout(
     State(state): State<AppState>,
     Json(request): Json<RefreshTokenRequest>,
@@ -92,14 +126,34 @@ pub async fn logout(
     ))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/logout-all",
+    tag = "Authentication",
+    request_body = LogoutAllRequest,
+    responses(
+        (
+            status = 200,
+            description = "Logout from all devices successful"
+        ),
+        (
+            status = 400,
+            description = "Bad request"
+        ),
+        (
+            status = 401,
+            description = "Unauthorized"
+        )
+    )
+)]
 pub async fn logout_all(
     State(state): State<AppState>,
-    Json(user_id): Json<u64>,
+    Json(request): Json<LogoutAllRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<()>>), AppError> {
     state
         .services
         .auth
-        .logout_all(user_id)
+        .logout_all(request.user_id)
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
 

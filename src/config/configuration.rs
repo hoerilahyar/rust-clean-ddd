@@ -1,19 +1,17 @@
-use config::{Config as ConfigBuilder, Environment, File};
+use config::{Config as ConfigBuilder, File};
 use serde::Deserialize;
 
-use super::env;
+use super::{env, env_configuration::EnvConfig};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub app: AppConfig,
     pub database: DatabaseConfig,
-    pub redis: RedisConfig,
     pub jwt: JwtConfig,
     pub logger: LoggerConfig,
     pub cors: CorsConfig,
     pub pagination: PaginationConfig,
     pub upload: UploadConfig,
-    pub storage: StorageConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -37,20 +35,20 @@ pub struct DatabaseConfig {
     pub acquire_timeout: u64,
     pub log_sql: bool,
 
+    #[serde(skip)]
     pub host: String,
-    pub port: u16,
-    pub database: String,
-    pub username: String,
-    pub password: String,
-}
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct RedisConfig {
-    pub host: String,
+    #[serde(skip)]
     pub port: u16,
+
+    #[serde(skip)]
+    pub database: String,
+
+    #[serde(skip)]
+    pub username: String,
+
+    #[serde(skip)]
     pub password: String,
-    pub database: i64,
-    pub pool_size: u32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -58,6 +56,8 @@ pub struct JwtConfig {
     pub issuer: String,
     pub access_token_expired: u64,
     pub refresh_token_expired: u64,
+
+    #[serde(skip)]
     pub secret: String,
 }
 
@@ -88,22 +88,26 @@ pub struct CorsConfig {
     pub allow_headers: Vec<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct StorageConfig {
-    pub provider: String,
-    pub local_path: String,
-    pub base_url: String,
-    pub bucket: String,
-}
-
 impl Config {
     pub fn load() -> Result<Self, config::ConfigError> {
         env::load();
 
-        ConfigBuilder::builder()
+        let mut config: Config = ConfigBuilder::builder()
             .add_source(File::with_name("configs/app"))
-            .add_source(Environment::default().separator("_"))
             .build()?
-            .try_deserialize()
+            .try_deserialize()?;
+
+        let env: EnvConfig =
+            envy::from_env().map_err(|e| config::ConfigError::Message(e.to_string()))?;
+
+        config.database.host = env.mysql_host;
+        config.database.port = env.mysql_port;
+        config.database.database = env.mysql_database;
+        config.database.username = env.mysql_username;
+        config.database.password = env.mysql_password;
+
+        config.jwt.secret = env.jwt_secret;
+
+        Ok(config)
     }
 }

@@ -1,6 +1,7 @@
 use serde::Deserialize;
+use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, IntoParams, ToSchema)]
 pub struct ListRoleRequest {
     pub page: Option<u64>,
 

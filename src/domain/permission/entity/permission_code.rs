@@ -14,6 +14,14 @@ pub enum PermissionCode {
     PermissionRead,
     PermissionUpdate,
     PermissionDelete,
+
+    RolePermissionAssign,
+    RolePermissionRevoke,
+    RolePermissionRead,
+
+    UserRoleAssign,
+    UserRoleRevoke,
+    UserRoleRead,
 }
 
 impl PermissionCode {
@@ -33,6 +41,14 @@ impl PermissionCode {
             Self::PermissionRead => "PERMISSION_READ",
             Self::PermissionUpdate => "PERMISSION_UPDATE",
             Self::PermissionDelete => "PERMISSION_DELETE",
+
+            Self::RolePermissionAssign => "ROLE_PERMISSION_ASSIGN",
+            Self::RolePermissionRevoke => "ROLE_PERMISSION_REVOKE",
+            Self::RolePermissionRead => "ROLE_PERMISSION_READ",
+
+            Self::UserRoleAssign => "USER_ROLE_ASSIGN",
+            Self::UserRoleRevoke => "USER_ROLE_REVOKE",
+            Self::UserRoleRead => "USER_ROLE_READ",
         }
     }
 }

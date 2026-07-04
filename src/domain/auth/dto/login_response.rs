@@ -1,14 +1,16 @@
-use crate::infrastructure::security::TokenPair;
 use serde::Serialize;
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize)]
+use crate::infrastructure::security::TokenPair;
+
+#[derive(Debug, Serialize, ToSchema)]
 pub struct LoginResponse {
     pub token: TokenPair,
 
     pub user: LoginUser,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct LoginUser {
     pub id: u64,
     pub username: String,

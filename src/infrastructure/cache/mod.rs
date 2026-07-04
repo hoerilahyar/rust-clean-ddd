@@ -1,3 +1,3 @@
 pub mod redis;
 
-pub use redis::connect;
+// pub use redis::connect;
