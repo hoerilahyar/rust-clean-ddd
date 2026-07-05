@@ -6,6 +6,7 @@ use crate::{
     bootstrap::state::{AppState, Infrastructure, Services},
     config::Config,
     domain::{
+        audit_log::{repository::MySqlAuditLogRepository, service::DefaultAuditLogService},
         auth::{repository::mysql_repository::MySqlAuthRepository, service::DefaultAuthService},
         authorization::{
             repository::MySqlAuthorizationRepository, service::DefaultAuthorizationService,
@@ -39,6 +40,7 @@ pub async fn build_state() -> Result<AppState> {
     let role_permission_repo = Arc::new(MySqlRolePermissionRepository::new(Arc::new(db.clone())));
     let user_role_repo = Arc::new(MySqlUserRoleRepository::new(Arc::new(db.clone())));
     let authorization_repo = Arc::new(MySqlAuthorizationRepository::new(Arc::new(db.clone())));
+    let audit_log_repo = Arc::new(MySqlAuditLogRepository::new(db.clone()));
 
     // infrastructure service
     let jwt = Arc::new(JwtService::new(&config));
@@ -51,6 +53,7 @@ pub async fn build_state() -> Result<AppState> {
     let role_permission_service = Arc::new(DefaultRolePermissionService::new(role_permission_repo));
     let user_role_service = Arc::new(DefaultUserRoleService::new(user_role_repo));
     let authorization_service = Arc::new(DefaultAuthorizationService::new(authorization_repo));
+    let audit_log_service = Arc::new(DefaultAuditLogService::new(audit_log_repo));
 
     let infra = Infrastructure {
         db,
@@ -72,6 +75,7 @@ pub async fn build_state() -> Result<AppState> {
             role_permission: role_permission_service,
             user_role: user_role_service,
             authorization: authorization_service,
+            audit_logs: audit_log_service,
         },
     })
 }

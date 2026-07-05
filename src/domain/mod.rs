@@ -1,3 +1,4 @@
+pub mod audit_log;
 pub mod auth;
 pub mod authorization;
 pub mod permission;

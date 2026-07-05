@@ -42,6 +42,11 @@ use utoipa::OpenApi;
         crate::domain::user_role::handler::assign,
         crate::domain::user_role::handler::revoke,
         crate::domain::user_role::handler::list,
+
+        // Audit Log
+        crate::domain::audit_log::handler::list_audit_logs,
+        crate::domain::audit_log::handler::get_audit_log,
+        
     ),
     tags(
         (name = "Authentication", description = "Authentication endpoints"),
@@ -51,6 +56,7 @@ use utoipa::OpenApi;
         (name = "Permission", description = "Permission management"),
         (name = "Role Permission", description = "Role permission management"),
         (name = "User Role", description = "User role management"),
+        (name = "Audit Log", description = "Audit log"),
     )
 )]
 pub struct ApiDoc;
