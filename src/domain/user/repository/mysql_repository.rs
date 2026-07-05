@@ -35,7 +35,7 @@ impl UserRepository for MySqlUserRepository {
             created_at,
             updated_at
         FROM users
-        WHERE id = ?
+        WHERE deleted_at IS NULL AND id = ?
         "#,
         )
         .bind(id)
@@ -109,7 +109,7 @@ impl UserRepository for MySqlUserRepository {
             created_at,
             updated_at
         FROM users
-        WHERE username = ?
+        WHERE deleted_at IS NULL AND username = ?
         LIMIT 1
         "#,
         )
@@ -134,7 +134,7 @@ impl UserRepository for MySqlUserRepository {
             created_at,
             updated_at
         FROM users
-        WHERE email = ?
+        WHERE deleted_at IS NULL AND email = ?
         LIMIT 1
         "#,
         )
@@ -174,7 +174,7 @@ impl UserRepository for MySqlUserRepository {
             created_at,
             updated_at
         FROM users
-        WHERE 1 = 1
+        WHERE deleted_at IS NULL 
         "#,
         );
 
@@ -206,11 +206,15 @@ impl UserRepository for MySqlUserRepository {
 
         builder.push(format!(" ORDER BY {} {}", sort_by, sort_type));
 
+        let page = filter.page.max(1);
+        let page_size = filter.page_size.max(1);
+        let offset = (page - 1) * page_size;
+
         builder.push(" LIMIT ");
-        builder.push_bind(filter.page_size as i64);
+        builder.push_bind(page_size as i64);
 
         builder.push(" OFFSET ");
-        builder.push_bind(((filter.page - 1) * filter.page_size) as i64);
+        builder.push_bind(offset as i64);
 
         let users = builder
             .build_query_as::<User>()
@@ -220,7 +224,8 @@ impl UserRepository for MySqlUserRepository {
         Ok(users)
     }
     async fn count(&self, filter: &UserFilter) -> Result<u64> {
-        let mut builder = QueryBuilder::<MySql>::new("SELECT COUNT(*) FROM users WHERE 1 = 1");
+        let mut builder =
+            QueryBuilder::<MySql>::new("SELECT COUNT(*) FROM users WHERE deleted_at IS NULL ");
 
         if let Some(search) = &filter.search {
             if !search.trim().is_empty() {
@@ -243,10 +248,17 @@ impl UserRepository for MySqlUserRepository {
     }
 
     async fn delete(&self, id: u64) -> Result<()> {
-        sqlx::query("DELETE FROM users WHERE id = ?")
-            .bind(id)
-            .execute(self.db.as_ref())
-            .await?;
+        sqlx::query(
+            r#"
+        UPDATE users
+        SET
+            deleted_at = UTC_TIMESTAMP()
+        WHERE id = ?
+        "#,
+        )
+        .bind(id)
+        .execute(self.db.as_ref())
+        .await?;
 
         Ok(())
     }

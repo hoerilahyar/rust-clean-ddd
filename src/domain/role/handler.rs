@@ -184,7 +184,7 @@ pub async fn delete(
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
     headers: HeaderMap,
 ) -> Result<(StatusCode, Json<ApiResponse<()>>), AppError> {
-    current_user.require(PermissionCode::RoleRead)?;
+    current_user.require(PermissionCode::RoleDelete)?;
 
     let ip_address = Some(addr.ip().to_string());
     let user_agent = headers

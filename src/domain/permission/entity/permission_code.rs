@@ -22,6 +22,8 @@ pub enum PermissionCode {
     UserRoleAssign,
     UserRoleRevoke,
     UserRoleRead,
+
+    AuditLogRead,
 }
 
 impl PermissionCode {
@@ -49,6 +51,8 @@ impl PermissionCode {
             Self::UserRoleAssign => "USER_ROLE_ASSIGN",
             Self::UserRoleRevoke => "USER_ROLE_REVOKE",
             Self::UserRoleRead => "USER_ROLE_READ",
+
+            Self::AuditLogRead => "AUDIT_LOG_READ",
         }
     }
 }

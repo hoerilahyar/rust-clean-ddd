@@ -7,8 +7,13 @@ use validator::Validate;
 
 use crate::{
     bootstrap::state::AppState,
-    common::{error::app_error::AppError, response::api_response::ApiResponse},
-    domain::audit_log::dto::{AuditLogListResponse, AuditLogQueryRequest, AuditLogResponse},
+    common::{
+        error::app_error::AppError, extractor::CurrentUser, response::api_response::ApiResponse,
+    },
+    domain::{
+        audit_log::dto::{AuditLogListResponse, AuditLogQueryRequest, AuditLogResponse},
+        permission::entity::PermissionCode,
+    },
 };
 
 #[utoipa::path(
@@ -23,9 +28,12 @@ use crate::{
     )
 )]
 pub async fn list_audit_logs(
+    current_user: CurrentUser,
     State(state): State<AppState>,
     Query(query): Query<AuditLogQueryRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<AuditLogListResponse>>), AppError> {
+    current_user.require(PermissionCode::AuditLogRead)?;
+
     query
         .validate()
         .map_err(|e| AppError::Validation(vec![("query".into(), e.to_string())]))?;
@@ -56,9 +64,12 @@ pub async fn list_audit_logs(
     )
 )]
 pub async fn get_audit_log(
+    current_user: CurrentUser,
     State(state): State<AppState>,
     Path(id): Path<u64>,
 ) -> Result<(StatusCode, Json<ApiResponse<AuditLogResponse>>), AppError> {
+    current_user.require(PermissionCode::AuditLogRead)?;
+
     let response = state
         .services
         .audit_logs

@@ -103,6 +103,7 @@ impl DefaultUserService {
             last_login_at: None,
             created_at: now,
             updated_at: now,
+            deleted_at: None,
         };
 
         let id = self.repository.create(&entity).await?;

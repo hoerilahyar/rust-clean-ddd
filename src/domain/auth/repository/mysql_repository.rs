@@ -27,19 +27,23 @@ impl AuthRepository for MySqlAuthRepository {
             email,
             password,
             fullname,
+            phone,
+            avatar,
             is_active,
+            last_login_at,
             created_at,
-            updated_at
+            updated_at,
+            deleted_at
         FROM users
         WHERE id = ?
         LIMIT 1
         "#,
         )
         .bind(user_id)
-        .fetch_one(&self.pool)
+        .fetch_optional(&self.pool)
         .await?;
 
-        Ok(Some(user))
+        Ok(user)
     }
 
     async fn find_by_username_or_email(&self, value: &str) -> Result<Option<AuthUser>> {
