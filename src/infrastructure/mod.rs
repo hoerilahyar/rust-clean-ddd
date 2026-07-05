@@ -2,6 +2,7 @@ pub mod cache;
 pub mod database;
 pub mod email;
 pub mod external;
+pub mod logging;
 pub mod notification;
 pub mod oauth;
 pub mod queue;
