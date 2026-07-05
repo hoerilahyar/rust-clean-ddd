@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS role_permissions;
+
 CREATE TABLE role_permissions (
 
     role_id BIGINT UNSIGNED NOT NULL,

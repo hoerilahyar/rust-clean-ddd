@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS menu_permissions;
+
 CREATE TABLE menu_permissions (
 
     menu_id BIGINT UNSIGNED,

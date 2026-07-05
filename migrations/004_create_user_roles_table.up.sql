@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS user_roles;
+
 CREATE TABLE user_roles (
 
     user_id BIGINT UNSIGNED NOT NULL,

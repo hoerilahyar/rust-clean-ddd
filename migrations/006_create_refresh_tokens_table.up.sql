@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS refresh_tokens;
+
 CREATE TABLE refresh_tokens (
 
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
