@@ -107,16 +107,24 @@ pub async fn refresh_token(
 )]
 pub async fn logout(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
+    headers: HeaderMap,
     Json(request): Json<RefreshTokenRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<()>>), AppError> {
     request
         .validate()
         .map_err(|e| AppError::Validation(vec![("request".into(), e.to_string())]))?;
 
+    let ip_address = Some(addr.ip().to_string());
+    let user_agent = headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
+
     state
         .services
         .auth
-        .logout(request)
+        .logout(request, ip_address, user_agent)
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
@@ -148,12 +156,20 @@ pub async fn logout(
 )]
 pub async fn logout_all(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
+    headers: HeaderMap,
     Json(request): Json<LogoutAllRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<()>>), AppError> {
+    let ip_address = Some(addr.ip().to_string());
+    let user_agent = headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
+
     state
         .services
         .auth
-        .logout_all(request.user_id)
+        .logout_all(request.user_id, ip_address, user_agent)
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
 

@@ -38,7 +38,7 @@ impl RolePermissionRepository for MySqlRolePermissionRepository {
                 permission_id,
                 created_at
             )
-            VALUES (?, ?, ?)
+            VALUES (?, ?, UTC_TIMESTAMP())
             "#,
             )
             .bind(role_id)

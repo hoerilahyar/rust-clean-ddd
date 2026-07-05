@@ -30,7 +30,9 @@ pub mod audit_action {
     pub const USER_DELETED: &str = "user.deleted";
     pub const RBAC_ROLE_ASSIGNED: &str = "rbac.role_assigned";
     pub const RBAC_ROLE_REVOKED: &str = "rbac.role_revoked";
+    pub const RBAC_ROLE_DELETED: &str = "rbac.role_deleted";
     pub const RBAC_PERMISSION_UPDATED: &str = "rbac.permission_updated";
+    pub const RBAC_PERMISSION_DELETED: &str = "rbac.permission_deleted";
 }
 
 pub mod audit_status {

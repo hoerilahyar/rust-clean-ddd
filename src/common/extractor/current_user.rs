@@ -11,6 +11,10 @@ pub struct CurrentUser {
 }
 
 impl CurrentUser {
+    pub fn user_id(&self) -> u64 {
+        self.context.user_id
+    }
+
     pub fn require(&self, permission: PermissionCode) -> Result<(), AppError> {
         if self
             .context

@@ -58,7 +58,7 @@ impl UserRepository for MySqlUserRepository {
             created_at,
             updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())
         "#,
         )
         .bind(&user.username)
@@ -67,8 +67,6 @@ impl UserRepository for MySqlUserRepository {
         .bind(&user.password)
         .bind(user.is_active)
         .bind(user.last_login_at)
-        .bind(user.created_at)
-        .bind(user.updated_at)
         .execute(self.db.as_ref())
         .await?;
 
@@ -83,14 +81,13 @@ impl UserRepository for MySqlUserRepository {
             fullname = ?,
             email = ?,
             is_active = ?,
-            updated_at = ?
+            updated_at = UTC_TIMESTAMP()
         WHERE id = ?
         "#,
         )
         .bind(&user.fullname)
         .bind(&user.email)
         .bind(user.is_active)
-        .bind(user.updated_at)
         .bind(user.id)
         .execute(self.db.as_ref())
         .await?;

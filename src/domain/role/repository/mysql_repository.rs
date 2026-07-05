@@ -33,20 +33,19 @@ impl RoleRepository for MySqlRoleRepository {
                 created_at,
                 updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())
             "#,
         )
         .bind(&role.code)
         .bind(&role.name)
         .bind(&role.description)
         .bind(role.is_active)
-        .bind(role.created_at)
-        .bind(role.updated_at)
         .execute(self.db.as_ref())
         .await?;
 
         Ok(result.last_insert_id())
     }
+
     async fn update(&self, role: &Role) -> Result<()> {
         sqlx::query(
             r#"
@@ -55,14 +54,13 @@ impl RoleRepository for MySqlRoleRepository {
                 name = ?,
                 description = ?,
                 is_active = ?,
-                updated_at = ?
+                updated_at = UTC_TIMESTAMP()
             WHERE id = ?
             "#,
         )
         .bind(&role.name)
         .bind(&role.description)
         .bind(role.is_active)
-        .bind(role.updated_at)
         .bind(role.id)
         .execute(self.db.as_ref())
         .await?;

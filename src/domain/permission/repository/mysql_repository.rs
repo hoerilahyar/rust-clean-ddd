@@ -35,7 +35,7 @@ impl PermissionRepository for MySqlPermissionRepository {
             created_at,
             updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())
         "#,
         )
         .bind(&permission.code)
@@ -44,13 +44,12 @@ impl PermissionRepository for MySqlPermissionRepository {
         .bind(&permission.action)
         .bind(&permission.description)
         .bind(permission.is_active)
-        .bind(permission.created_at)
-        .bind(permission.updated_at)
         .execute(self.db.as_ref())
         .await?;
 
         Ok(result.last_insert_id())
     }
+
     async fn update(&self, permission: &Permission) -> Result<()> {
         sqlx::query(
             r#"
@@ -59,14 +58,13 @@ impl PermissionRepository for MySqlPermissionRepository {
             name = ?,
             description = ?,
             is_active = ?,
-            updated_at = ?
+            updated_at = UTC_TIMESTAMP()
         WHERE id = ?
         "#,
         )
         .bind(&permission.name)
         .bind(&permission.description)
         .bind(permission.is_active)
-        .bind(permission.updated_at)
         .bind(permission.id)
         .execute(self.db.as_ref())
         .await?;

@@ -1,6 +1,5 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use chrono::Utc;
 use sqlx::MySqlPool;
 
 use crate::domain::auth::dto::RefreshTokenRequest;
@@ -242,15 +241,13 @@ impl AuthRepository for MySqlAuthRepository {
             r#"
             UPDATE users
             SET
-                last_login_at = ?,
-                updated_at = ?
+                last_login_at = UTC_TIMESTAMP(),
+                updated_at = UTC_TIMESTAMP()
             WHERE
                 id = ?
                 AND deleted_at IS NULL
             "#,
         )
-        .bind(Utc::now())
-        .bind(Utc::now())
         .bind(user_id)
         .execute(&self.pool)
         .await?;

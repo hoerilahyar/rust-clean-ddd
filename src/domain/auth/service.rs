@@ -5,6 +5,8 @@ use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
 
+use crate::domain::audit_log::entity::audit_action;
+use crate::domain::audit_log::service::{AuditLogService, RecordAuditLogInput};
 use crate::domain::auth::dto::{
     LoginRequest, LoginResponse, LoginUser, RefreshTokenRequest, RefreshTokenResponse,
 };
@@ -14,7 +16,6 @@ use crate::domain::auth::entity::{AuthUser, Permission, RefreshToken, Role};
 use crate::domain::auth::errors::AuthError;
 use crate::domain::auth::repository::auth_repository::AuthRepository;
 
-// use crate::infrastructure::security::claims::AccessClaims;
 use crate::infrastructure::security::jwt::JwtService;
 use crate::infrastructure::security::password::PasswordService;
 
@@ -36,21 +37,37 @@ pub trait AuthService: Send + Sync {
         user_agent: Option<String>,
     ) -> Result<RefreshTokenResponse>;
 
-    async fn logout(&self, refresh_token: RefreshTokenRequest) -> Result<()>;
+    async fn logout(
+        &self,
+        refresh_token: RefreshTokenRequest,
+        ip_address: Option<String>,
+        user_agent: Option<String>,
+    ) -> Result<()>;
 
-    async fn logout_all(&self, user_id: u64) -> Result<()>;
+    async fn logout_all(
+        &self,
+        user_id: u64,
+        ip_address: Option<String>,
+        user_agent: Option<String>,
+    ) -> Result<()>;
 }
 
 pub struct DefaultAuthService {
     repository: Arc<dyn AuthRepository>,
     jwt_service: Arc<JwtService>,
+    audit_log_service: Arc<dyn AuditLogService>,
 }
 
 impl DefaultAuthService {
-    pub fn new(repository: Arc<dyn AuthRepository>, jwt_service: Arc<JwtService>) -> Self {
+    pub fn new(
+        repository: Arc<dyn AuthRepository>,
+        jwt_service: Arc<JwtService>,
+        audit_log_service: Arc<dyn AuditLogService>,
+    ) -> Self {
         Self {
             repository,
             jwt_service,
+            audit_log_service,
         }
     }
 
@@ -65,17 +82,6 @@ impl DefaultAuthService {
 
         self.repository.find_permissions(role_ids).await
     }
-
-    // fn build_access_claims(&self, user: &AuthUser, roles: &[Role]) -> AccessClaims {
-    //     AccessClaims {
-    //         sub: user.id,
-    //         username: user.username.clone(),
-    //         roles: roles.iter().map(|r| r.name.clone()).collect(),
-    //         iss: "your-app".to_string(),
-    //         iat: Utc::now().timestamp() as usize,
-    //         exp: (Utc::now() + Duration::minutes(15)).timestamp() as usize,
-    //     }
-    // }
 
     fn map_login_response(
         &self,
@@ -137,10 +143,6 @@ impl DefaultAuthService {
         roles.iter().map(|r| r.id).collect()
     }
 
-    // fn role_codes(&self, roles: &[Role]) -> HashSet<String> {
-    //     roles.iter().map(|r| r.slug.clone()).collect()
-    // }
-
     async fn verify_login(&self, request: &LoginRequest) -> Result<AuthUser> {
         let user = self
             .repository
@@ -168,10 +170,7 @@ impl DefaultAuthService {
         ip_address: Option<String>,
         device_id: String,
     ) -> Result<(String, String, u64)> {
-        let role_names = roles
-            .iter()
-            .map(|r| r.slug.clone()) // atau r.name.clone(), sesuai desain Anda
-            .collect::<Vec<_>>();
+        let role_names = roles.iter().map(|r| r.slug.clone()).collect::<Vec<_>>();
 
         let access_token =
             self.jwt_service
@@ -214,9 +213,30 @@ impl AuthService for DefaultAuthService {
         &self,
         request: LoginRequest,
         ip_address: Option<String>,
-        _user_agent: Option<String>,
+        user_agent: Option<String>,
     ) -> Result<LoginResponse> {
-        let user = self.verify_login(&request).await?;
+        // Verifikasi kredensial terpisah dari alur utama supaya kegagalan
+        // login (kredensial salah / user inactive) tetap tercatat sebagai audit log "failed".
+        let user = match self.verify_login(&request).await {
+            Ok(user) => user,
+            Err(err) => {
+                self.audit_log_service
+                    .record(RecordAuditLogInput {
+                        actor_id: None,
+                        actor_email: Some(request.identity.clone()),
+                        action: audit_action::AUTH_LOGIN.to_string(),
+                        entity_type: Some("user".into()),
+                        entity_id: None,
+                        is_success: false,
+                        ip_address,
+                        user_agent,
+                        metadata: Some(serde_json::json!({ "error": err.to_string() })),
+                    })
+                    .await;
+
+                return Err(err);
+            }
+        };
 
         let roles = self.load_roles(user.id).await?;
 
@@ -229,10 +249,24 @@ impl AuthService for DefaultAuthService {
         let permissions = self.deduplicate_permissions(self.load_permissions(&role_ids).await?);
 
         let (access_token, refresh_token, expires_in) = self
-            .issue_tokens(&user, &roles, ip_address, request.device_id.clone())
+            .issue_tokens(&user, &roles, ip_address.clone(), request.device_id.clone())
             .await?;
 
         self.repository.update_last_login(user.id).await?;
+
+        self.audit_log_service
+            .record(RecordAuditLogInput {
+                actor_id: Some(user.id),
+                actor_email: Some(user.email.clone()),
+                action: audit_action::AUTH_LOGIN.to_string(),
+                entity_type: Some("user".into()),
+                entity_id: Some(user.id.to_string()),
+                is_success: true,
+                ip_address,
+                user_agent,
+                metadata: None,
+            })
+            .await;
 
         Ok(self.map_login_response(
             access_token,
@@ -248,7 +282,7 @@ impl AuthService for DefaultAuthService {
         &self,
         request: RefreshTokenRequest,
         ip_address: Option<String>,
-        _user_agent: Option<String>,
+        user_agent: Option<String>,
     ) -> Result<RefreshTokenResponse> {
         let stored = self
             .repository
@@ -282,20 +316,35 @@ impl AuthService for DefaultAuthService {
             return Err(anyhow!(AuthError::RoleNotFound));
         }
 
-        // let role_ids = self.role_ids(&roles);
-
-        // let permissions = self.deduplicate_permissions(self.load_permissions(&role_ids).await?);
-
         self.repository.revoke_refresh_token(stored.id).await?;
 
         let (access_token, new_refresh_token, expires_in) = self
-            .issue_tokens(&user, &roles, ip_address, stored.device_id.clone())
+            .issue_tokens(&user, &roles, ip_address.clone(), stored.device_id.clone())
             .await?;
+
+        self.audit_log_service
+            .record(RecordAuditLogInput {
+                actor_id: Some(user.id),
+                actor_email: Some(user.email.clone()),
+                action: audit_action::AUTH_REFRESH_TOKEN.to_string(),
+                entity_type: Some("user".into()),
+                entity_id: Some(user.id.to_string()),
+                is_success: true,
+                ip_address,
+                user_agent,
+                metadata: None,
+            })
+            .await;
 
         Ok(self.map_refresh_response(access_token, new_refresh_token, expires_in))
     }
 
-    async fn logout(&self, refresh_token: RefreshTokenRequest) -> Result<()> {
+    async fn logout(
+        &self,
+        refresh_token: RefreshTokenRequest,
+        ip_address: Option<String>,
+        user_agent: Option<String>,
+    ) -> Result<()> {
         let stored = self.repository.find_refresh_token(refresh_token).await?;
 
         let Some(token) = stored else {
@@ -306,71 +355,45 @@ impl AuthService for DefaultAuthService {
             self.repository.revoke_refresh_token(token.id).await?;
         }
 
+        self.audit_log_service
+            .record(RecordAuditLogInput {
+                actor_id: Some(token.user_id),
+                actor_email: None,
+                action: audit_action::AUTH_LOGOUT.to_string(),
+                entity_type: Some("user".into()),
+                entity_id: Some(token.user_id.to_string()),
+                is_success: true,
+                ip_address,
+                user_agent,
+                metadata: None,
+            })
+            .await;
+
         Ok(())
     }
 
-    async fn logout_all(&self, user_id: u64) -> Result<()> {
+    async fn logout_all(
+        &self,
+        user_id: u64,
+        ip_address: Option<String>,
+        user_agent: Option<String>,
+    ) -> Result<()> {
         self.repository.revoke_all_refresh_tokens(user_id).await?;
 
+        self.audit_log_service
+            .record(RecordAuditLogInput {
+                actor_id: Some(user_id),
+                actor_email: None,
+                action: audit_action::AUTH_LOGOUT_ALL.to_string(),
+                entity_type: Some("user".into()),
+                entity_id: Some(user_id.to_string()),
+                is_success: true,
+                ip_address,
+                user_agent,
+                metadata: None,
+            })
+            .await;
+
         Ok(())
     }
-}
-
-impl DefaultAuthService {
-    // async fn load_user_context(&self, user: &AuthUser) -> Result<(Vec<Role>, Vec<Permission>)> {
-    //     let roles = self.load_roles(user.id).await?;
-
-    //     if roles.is_empty() {
-    //         return Err(anyhow!(AuthError::RoleNotFound));
-    //     }
-
-    //     let role_ids = self.role_ids(&roles);
-
-    //     let permissions = self.deduplicate_permissions(self.load_permissions(&role_ids).await?);
-
-    //     Ok((roles, permissions))
-    // }
-
-    // async fn rotate_refresh_token(
-    //     &self,
-    //     refresh_token: &RefreshToken,
-    //     user: &AuthUser,
-    //     ip_address: Option<String>,
-    // ) -> Result<(String, String, u64)> {
-    //     let (roles, _permissions) = self.load_user_context(user).await?;
-
-    //     self.repository
-    //         .revoke_refresh_token(refresh_token.id)
-    //         .await?;
-
-    //     self.issue_tokens(user, &roles, ip_address, refresh_token.device_id.clone())
-    //         .await
-    // }
-
-    // async fn revoke_if_expired(&self, refresh_token: &RefreshToken) -> Result<bool> {
-    //     if refresh_token.revoked_at.is_some() {
-    //         return Ok(true);
-    //     }
-
-    //     if refresh_token.expired_at > Utc::now() {
-    //         return Ok(false);
-    //     }
-
-    //     self.repository
-    //         .revoke_refresh_token(refresh_token.id)
-    //         .await?;
-
-    //     Ok(true)
-    // }
-
-    // fn permission_codes(&self, permissions: &[Permission]) -> Vec<String> {
-    //     permissions
-    //         .iter()
-    //         .map(|permission| permission.slug.clone())
-    //         .collect()
-    // }
-
-    // fn role_codes_vec(&self, roles: &[Role]) -> Vec<String> {
-    //     roles.iter().map(|role| role.slug.clone()).collect()
-    // }
 }

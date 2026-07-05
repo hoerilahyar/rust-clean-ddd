@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use chrono::Utc;
 use sqlx::MySqlPool;
 
 use crate::domain::{role::entity::Role, user_role::repository::UserRoleRepository};
@@ -36,12 +35,11 @@ impl UserRoleRepository for MySqlUserRoleRepository {
                 role_id,
                 created_at
             )
-            VALUES (?, ?, ?)
+            VALUES (?, ?, UTC_TIMESTAMP())
             "#,
             )
             .bind(user_id)
             .bind(role_id)
-            .bind(Utc::now())
             .execute(&mut *tx)
             .await?;
         }

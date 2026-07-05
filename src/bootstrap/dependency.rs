@@ -35,7 +35,7 @@ pub async fn build_state() -> Result<AppState> {
     // repository
     let auth_repository = Arc::new(MySqlAuthRepository::new(db.clone()));
     let user_repository = Arc::new(MySqlUserRepository::new(Arc::new(db.clone())));
-    let role_repository = Arc::new(MySqlRoleRepository::new(Arc::new(db.clone())));
+    let role_repo = Arc::new(MySqlRoleRepository::new(Arc::new(db.clone())));
     let permission_repo = Arc::new(MySqlPermissionRepository::new(Arc::new(db.clone())));
     let role_permission_repo = Arc::new(MySqlRolePermissionRepository::new(Arc::new(db.clone())));
     let user_role_repo = Arc::new(MySqlUserRoleRepository::new(Arc::new(db.clone())));
@@ -46,14 +46,34 @@ pub async fn build_state() -> Result<AppState> {
     let jwt = Arc::new(JwtService::new(&config));
 
     // domain service
-    let auth_service = Arc::new(DefaultAuthService::new(auth_repository, jwt.clone()));
-    let user_service = Arc::new(DefaultUserService::new(user_repository));
-    let role_service = Arc::new(DefaultRoleService::new(role_repository));
-    let permission_service = Arc::new(DefaultPermissionService::new(permission_repo));
-    let role_permission_service = Arc::new(DefaultRolePermissionService::new(role_permission_repo));
-    let user_role_service = Arc::new(DefaultUserRoleService::new(user_role_repo));
-    let authorization_service = Arc::new(DefaultAuthorizationService::new(authorization_repo));
     let audit_log_service = Arc::new(DefaultAuditLogService::new(audit_log_repo));
+
+    let auth_service = Arc::new(DefaultAuthService::new(
+        auth_repository,
+        jwt.clone(),
+        audit_log_service.clone(),
+    ));
+    let user_service = Arc::new(DefaultUserService::new(
+        user_repository,
+        audit_log_service.clone(),
+    ));
+    let role_service = Arc::new(DefaultRoleService::new(
+        role_repo,
+        audit_log_service.clone(),
+    ));
+    let permission_service = Arc::new(DefaultPermissionService::new(
+        permission_repo,
+        audit_log_service.clone(),
+    ));
+    let role_permission_service = Arc::new(DefaultRolePermissionService::new(
+        role_permission_repo,
+        audit_log_service.clone(),
+    ));
+    let user_role_service = Arc::new(DefaultUserRoleService::new(
+        user_role_repo,
+        audit_log_service.clone(),
+    ));
+    let authorization_service = Arc::new(DefaultAuthorizationService::new(authorization_repo));
 
     let infra = Infrastructure {
         db,

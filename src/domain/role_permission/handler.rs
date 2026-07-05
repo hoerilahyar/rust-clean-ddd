@@ -1,7 +1,7 @@
 use axum::{
     Json,
-    extract::{Path, State},
-    http::StatusCode,
+    extract::{ConnectInfo, Path, State},
+    http::{HeaderMap, StatusCode},
 };
 use validator::Validate;
 
@@ -47,6 +47,8 @@ pub async fn assign(
     current_user: CurrentUser,
     State(state): State<AppState>,
     Path(role_id): Path<u64>,
+    ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
+    headers: HeaderMap,
     Json(request): Json<AssignRolePermissionRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<()>>), AppError> {
     current_user.require(PermissionCode::RolePermissionAssign)?;
@@ -55,10 +57,22 @@ pub async fn assign(
         .validate()
         .map_err(|e| AppError::Validation(vec![("request".into(), e.to_string())]))?;
 
+    let ip_address = Some(addr.ip().to_string());
+    let user_agent = headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
+
     state
         .services
         .role_permission
-        .assign(role_id, request)
+        .assign(
+            role_id,
+            request,
+            Some(current_user.user_id()),
+            ip_address,
+            user_agent,
+        )
         .await
         .map_err(|e| AppError::BadRequest(e.to_string()))?;
 
@@ -97,13 +111,27 @@ pub async fn revoke(
     current_user: CurrentUser,
     State(state): State<AppState>,
     Path((role_id, permission_id)): Path<(u64, u64)>,
+    ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
+    headers: HeaderMap,
 ) -> Result<(StatusCode, Json<ApiResponse<()>>), AppError> {
     current_user.require(PermissionCode::RolePermissionRevoke)?;
+
+    let ip_address = Some(addr.ip().to_string());
+    let user_agent = headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
 
     state
         .services
         .role_permission
-        .revoke(role_id, permission_id)
+        .revoke(
+            role_id,
+            permission_id,
+            Some(current_user.user_id()),
+            ip_address,
+            user_agent,
+        )
         .await
         .map_err(|e| AppError::BadRequest(e.to_string()))?;
 

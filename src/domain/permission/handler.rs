@@ -1,7 +1,7 @@
 use axum::{
     Json,
-    extract::{Path, Query, State},
-    http::StatusCode,
+    extract::{ConnectInfo, Path, Query, State},
+    http::{HeaderMap, StatusCode},
 };
 use validator::Validate;
 
@@ -47,6 +47,8 @@ use crate::{
 pub async fn create(
     current_user: CurrentUser,
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
+    headers: HeaderMap,
     Json(request): Json<CreatePermissionRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<u64>>), AppError> {
     current_user.require(PermissionCode::PermissionCreate)?;
@@ -55,10 +57,21 @@ pub async fn create(
         .validate()
         .map_err(|e| AppError::Validation(vec![("request".into(), e.to_string())]))?;
 
+    let ip_address = Some(addr.ip().to_string());
+    let user_agent = headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
+
     let id = state
         .services
         .permission
-        .create(request)
+        .create(
+            request,
+            Some(current_user.user_id()),
+            ip_address,
+            user_agent,
+        )
         .await
         .map_err(|e| AppError::BadRequest(e.to_string()))?;
 
@@ -103,6 +116,8 @@ pub async fn update(
     current_user: CurrentUser,
     State(state): State<AppState>,
     Path(id): Path<u64>,
+    ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
+    headers: HeaderMap,
     Json(request): Json<UpdatePermissionRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<()>>), AppError> {
     current_user.require(PermissionCode::PermissionUpdate)?;
@@ -111,10 +126,22 @@ pub async fn update(
         .validate()
         .map_err(|e| AppError::Validation(vec![("request".into(), e.to_string())]))?;
 
+    let ip_address = Some(addr.ip().to_string());
+    let user_agent = headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
+
     state
         .services
         .permission
-        .update(id, request)
+        .update(
+            id,
+            request,
+            Some(current_user.user_id()),
+            ip_address,
+            user_agent,
+        )
         .await
         .map_err(|e| AppError::BadRequest(e.to_string()))?;
 
@@ -156,13 +183,21 @@ pub async fn delete(
     current_user: CurrentUser,
     State(state): State<AppState>,
     Path(id): Path<u64>,
+    ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
+    headers: HeaderMap,
 ) -> Result<(StatusCode, Json<ApiResponse<()>>), AppError> {
     current_user.require(PermissionCode::PermissionDelete)?;
+
+    let ip_address = Some(addr.ip().to_string());
+    let user_agent = headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
 
     state
         .services
         .permission
-        .delete(id)
+        .delete(id, Some(current_user.user_id()), ip_address, user_agent)
         .await
         .map_err(|e| AppError::BadRequest(e.to_string()))?;
 

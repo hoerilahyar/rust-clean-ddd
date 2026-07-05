@@ -3,40 +3,117 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 
-use crate::domain::role_permission::{
-    dto::{AssignRolePermissionRequest, RolePermissionResponse},
-    repository::RolePermissionRepository,
+use crate::domain::{
+    audit_log::service::{AuditLogService, RecordAuditLogInput},
+    role_permission::{
+        dto::{AssignRolePermissionRequest, RolePermissionResponse},
+        repository::RolePermissionRepository,
+    },
 };
 
 #[async_trait]
 pub trait RolePermissionService: Send + Sync {
-    async fn assign(&self, role_id: u64, request: AssignRolePermissionRequest) -> Result<()>;
+    async fn assign(
+        &self,
+        role_id: u64,
+        request: AssignRolePermissionRequest,
+        actor_id: Option<u64>,
+        ip_address: Option<String>,
+        user_agent: Option<String>,
+    ) -> Result<()>;
 
-    async fn revoke(&self, role_id: u64, permission_id: u64) -> Result<()>;
+    async fn revoke(
+        &self,
+        role_id: u64,
+        permission_id: u64,
+        actor_id: Option<u64>,
+        ip_address: Option<String>,
+        user_agent: Option<String>,
+    ) -> Result<()>;
 
     async fn list(&self, role_id: u64) -> Result<Vec<RolePermissionResponse>>;
 }
 
 pub struct DefaultRolePermissionService {
     repository: Arc<dyn RolePermissionRepository>,
+    audit_log_service: Arc<dyn AuditLogService>,
 }
 
 impl DefaultRolePermissionService {
-    pub fn new(repository: Arc<dyn RolePermissionRepository>) -> Self {
-        Self { repository }
+    pub fn new(
+        repository: Arc<dyn RolePermissionRepository>,
+        audit_log_service: Arc<dyn AuditLogService>,
+    ) -> Self {
+        Self {
+            repository,
+            audit_log_service,
+        }
     }
 }
 
 #[async_trait]
 impl RolePermissionService for DefaultRolePermissionService {
-    async fn assign(&self, role_id: u64, request: AssignRolePermissionRequest) -> Result<()> {
-        self.repository
+    async fn assign(
+        &self,
+        role_id: u64,
+        request: AssignRolePermissionRequest,
+        actor_id: Option<u64>,
+        ip_address: Option<String>,
+        user_agent: Option<String>,
+    ) -> Result<()> {
+        let result = self
+            .repository
             .assign(role_id, &request.permission_ids)
-            .await
+            .await;
+
+        self.audit_log_service
+            .record(RecordAuditLogInput {
+                actor_id,
+                actor_email: None,
+                action: "role_permission.assigned".to_string(),
+                entity_type: Some("role".into()),
+                entity_id: Some(role_id.to_string()),
+                is_success: result.is_ok(),
+                ip_address,
+                user_agent,
+                metadata: Some(serde_json::json!({
+                    "permission_ids": request.permission_ids,
+                    "error": result.as_ref().err().map(|e| e.to_string()),
+                })),
+            })
+            .await;
+
+        result
     }
 
-    async fn revoke(&self, role_id: u64, permission_id: u64) -> Result<()> {
-        self.repository.revoke(role_id, permission_id).await
+    async fn revoke(
+        &self,
+        role_id: u64,
+        permission_id: u64,
+        actor_id: Option<u64>,
+        ip_address: Option<String>,
+        user_agent: Option<String>,
+    ) -> Result<()> {
+        let result = self.repository.revoke(role_id, permission_id).await;
+
+        self.audit_log_service
+            .record(RecordAuditLogInput {
+                actor_id,
+                actor_email: None,
+                action: "role_permission.revoked".to_string(),
+                entity_type: Some("role".into()),
+                entity_id: Some(format!("role:{} permission:{}", role_id, permission_id)),
+                is_success: result.is_ok(),
+                ip_address,
+                user_agent,
+                metadata: result
+                    .as_ref()
+                    .err()
+                    .map(|e| serde_json::json!({ "error": e.to_string() })),
+            })
+            .await;
+
+        result
     }
 
     async fn list(&self, role_id: u64) -> Result<Vec<RolePermissionResponse>> {
