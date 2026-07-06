@@ -90,7 +90,7 @@ impl DefaultRoleService {
             code: request.code.clone(),
             name: request.name.clone(),
             description: request.description.clone(),
-            is_active: request.is_active,
+            is_active: request.is_active.unwrap_or(true),
             created_at: now,
             updated_at: now,
         };
@@ -105,10 +105,10 @@ impl DefaultRoleService {
             .await?
             .ok_or_else(|| anyhow!("Role not found"))?;
 
+        role.code = request.code.clone().unwrap_or(role.code);
         role.name = request.name.clone();
         role.description = request.description.clone();
-        role.is_active = request.is_active;
-        role.updated_at = Utc::now();
+        role.is_active = request.is_active.unwrap_or(role.is_active);
 
         self.repository.update(&role).await
     }

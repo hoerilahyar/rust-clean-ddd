@@ -7,6 +7,6 @@ use crate::{
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/audit-logs", get(list_audit_logs))
-        .route("/audit-logs/{id}", get(get_audit_log))
+        .route("/", get(list_audit_logs))
+        .route("/{id}", get(get_audit_log))
 }

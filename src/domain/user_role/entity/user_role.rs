@@ -10,3 +10,11 @@ pub struct UserRole {
 
     pub created_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Role {
+    pub id: u64,
+    pub code: String,
+    pub name: String,
+    pub is_active: bool,
+}

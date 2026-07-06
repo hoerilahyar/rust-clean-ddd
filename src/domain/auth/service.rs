@@ -11,11 +11,12 @@ use crate::domain::auth::dto::{
     LoginRequest, LoginResponse, LoginUser, RefreshTokenRequest, RefreshTokenResponse,
 };
 
-use crate::domain::auth::entity::{AuthUser, Permission, RefreshToken, Role};
+use crate::domain::auth::entity::{AuthUser, MenuContext, Permission, RefreshToken, Role};
 
 use crate::domain::auth::errors::AuthError;
 use crate::domain::auth::repository::auth_repository::AuthRepository;
 
+use crate::domain::menus::entity::Menu;
 use crate::infrastructure::security::jwt::JwtService;
 use crate::infrastructure::security::password::PasswordService;
 
@@ -91,6 +92,7 @@ impl DefaultAuthService {
         user: &AuthUser,
         roles: Vec<Role>,
         permissions: Vec<Permission>,
+        menus: Vec<Menu>,
     ) -> LoginResponse {
         LoginResponse {
             token: TokenPair {
@@ -106,9 +108,21 @@ impl DefaultAuthService {
                 fullname: user.fullname.clone(),
                 email: user.email.clone(),
 
-                roles: roles.into_iter().map(|r| r.slug.clone()).collect(),
+                roles: roles.into_iter().map(|r| r.slug).collect(),
 
-                permissions: permissions.into_iter().map(|p| p.slug.clone()).collect(),
+                permissions: permissions.into_iter().map(|p| p.slug).collect(),
+
+                menus: menus
+                    .into_iter()
+                    .map(|m| MenuContext {
+                        id: m.id,
+                        parent_id: m.parent_id,
+                        name: m.name,
+                        path: Some(m.path),
+                        icon: m.icon,
+                        sort_order: m.sort_order,
+                    })
+                    .collect(),
             },
         }
     }
@@ -248,6 +262,8 @@ impl AuthService for DefaultAuthService {
 
         let permissions = self.deduplicate_permissions(self.load_permissions(&role_ids).await?);
 
+        let menus = self.repository.find_menus(&role_ids).await?;
+
         let (access_token, refresh_token, expires_in) = self
             .issue_tokens(&user, &roles, ip_address.clone(), request.device_id.clone())
             .await?;
@@ -275,6 +291,7 @@ impl AuthService for DefaultAuthService {
             &user,
             roles,
             permissions,
+            menus,
         ))
     }
 

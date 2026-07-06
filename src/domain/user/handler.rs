@@ -8,7 +8,9 @@ use validator::Validate;
 use crate::{
     bootstrap::state::AppState,
     common::{
-        error::app_error::AppError, extractor::CurrentUser, response::api_response::ApiResponse,
+        error::app_error::AppError,
+        extractor::{CurrentUser, ValidatedJson},
+        response::api_response::ApiResponse,
     },
     domain::{
         permission::entity::PermissionCode,
@@ -49,7 +51,7 @@ pub async fn create(
     State(state): State<AppState>,
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
     headers: HeaderMap,
-    Json(request): Json<CreateUserRequest>,
+    ValidatedJson(request): ValidatedJson<CreateUserRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<u64>>), AppError> {
     current_user.require(PermissionCode::UserCreate)?;
 
@@ -118,7 +120,7 @@ pub async fn update(
     Path(id): Path<u64>,
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
     headers: HeaderMap,
-    Json(request): Json<UpdateUserRequest>,
+    ValidatedJson(request): ValidatedJson<UpdateUserRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<()>>), AppError> {
     current_user.require(PermissionCode::UserUpdate)?;
 

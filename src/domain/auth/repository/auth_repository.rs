@@ -1,8 +1,11 @@
 use async_trait::async_trait;
 
-use crate::domain::auth::{
-    dto::RefreshTokenRequest,
-    entity::{AuthUser, Permission, RefreshToken, Role},
+use crate::domain::{
+    auth::{
+        dto::RefreshTokenRequest,
+        entity::{AuthUser, Permission, RefreshToken, Role},
+    },
+    menus::entity::Menu,
 };
 
 #[async_trait]
@@ -19,4 +22,5 @@ pub trait AuthRepository: Send + Sync {
     async fn revoke_all_refresh_tokens(&self, user_id: u64) -> anyhow::Result<()>;
     async fn update_last_login(&self, user_id: u64) -> anyhow::Result<()>;
     async fn find_by_id(&self, user_id: u64) -> anyhow::Result<Option<AuthUser>>;
+    async fn find_menus(&self, role_ids: &[u64]) -> anyhow::Result<Vec<Menu>>;
 }

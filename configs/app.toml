@@ -22,8 +22,8 @@ pool_size = 20
 
 [jwt]
 issuer = "rust-clean-api"
-access_token_expired = 900
-refresh_token_expired = 604800
+access_token_expired = 604800
+refresh_token_expired = 2592000
 
 [http]
 read_timeout = 30

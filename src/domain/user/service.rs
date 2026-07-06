@@ -99,7 +99,7 @@ impl DefaultUserService {
             fullname: request.fullname.clone(),
             email: request.email.clone(),
             password: PasswordService::hash(&request.password)?,
-            is_active: request.is_active,
+            is_active: request.is_active.unwrap_or(true),
             last_login_at: None,
             created_at: now,
             updated_at: now,
@@ -118,13 +118,16 @@ impl DefaultUserService {
             .await?
             .ok_or_else(|| anyhow!("User not found"))?;
 
-        if user.email != request.email && self.repository.exists_email(&request.email).await? {
-            return Err(anyhow!("Email already exists"));
+        if let Some(new_email) = &request.email {
+            if *new_email != user.email && self.repository.exists_email(new_email).await? {
+                return Err(anyhow!("Email already exists"));
+            }
         }
 
-        user.fullname = request.fullname.clone();
-        user.email = request.email.clone();
-        user.is_active = request.is_active;
+        user.fullname = request.fullname.clone().unwrap_or(user.fullname);
+        user.email = request.email.clone().unwrap_or(user.email);
+        user.password = request.password.clone().unwrap_or(user.password);
+        user.is_active = request.is_active.unwrap_or(user.is_active);
         user.updated_at = Utc::now();
 
         self.repository.update(&user).await

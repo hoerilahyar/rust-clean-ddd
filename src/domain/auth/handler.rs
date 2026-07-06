@@ -7,7 +7,9 @@ use validator::Validate;
 
 use crate::{
     bootstrap::state::AppState,
-    common::{error::app_error::AppError, response::api_response::ApiResponse},
+    common::{
+        error::app_error::AppError, extractor::ValidatedJson, response::api_response::ApiResponse,
+    },
     domain::auth::dto::{
         LoginRequest, LoginResponse, LogoutAllRequest, RefreshTokenRequest, RefreshTokenResponse,
     },
@@ -28,7 +30,7 @@ pub async fn login(
     State(state): State<AppState>,
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
     headers: HeaderMap,
-    Json(request): Json<LoginRequest>,
+    ValidatedJson(request): ValidatedJson<LoginRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<LoginResponse>>), AppError> {
     request
         .validate()
@@ -69,7 +71,7 @@ pub async fn refresh_token(
     State(state): State<AppState>,
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
     headers: HeaderMap,
-    Json(request): Json<RefreshTokenRequest>,
+    ValidatedJson(request): ValidatedJson<RefreshTokenRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<RefreshTokenResponse>>), AppError> {
     request
         .validate()
@@ -109,7 +111,7 @@ pub async fn logout(
     State(state): State<AppState>,
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
     headers: HeaderMap,
-    Json(request): Json<RefreshTokenRequest>,
+    ValidatedJson(request): ValidatedJson<RefreshTokenRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<()>>), AppError> {
     request
         .validate()
@@ -158,7 +160,7 @@ pub async fn logout_all(
     State(state): State<AppState>,
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
     headers: HeaderMap,
-    Json(request): Json<LogoutAllRequest>,
+    ValidatedJson(request): ValidatedJson<LogoutAllRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<()>>), AppError> {
     let ip_address = Some(addr.ip().to_string());
     let user_agent = headers

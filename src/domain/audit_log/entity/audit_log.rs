@@ -33,6 +33,12 @@ pub mod audit_action {
     pub const RBAC_ROLE_DELETED: &str = "rbac.role_deleted";
     pub const RBAC_PERMISSION_UPDATED: &str = "rbac.permission_updated";
     pub const RBAC_PERMISSION_DELETED: &str = "rbac.permission_deleted";
+    pub const MENU_CREATED: &str = "menu.menu_created";
+    pub const MENU_UPDATED: &str = "menu.menu_updated";
+    pub const MENU_DELETED: &str = "menu.menu_deleted";
+    pub const MENU_PERMISSION_ASSIGNED: &str = "menu.permission.assigned";
+    pub const MENU_PERMISSION_REVOKE_PERMISSION: &str = "menu.permission.revoke_permission";
+    pub const MENU_PERMISSION_REVOKE_ALL: &str = "menu.permission.revoke_all_permission";
 }
 
 pub mod audit_status {

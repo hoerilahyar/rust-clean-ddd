@@ -11,6 +11,10 @@ use crate::{
         authorization::{
             repository::MySqlAuthorizationRepository, service::DefaultAuthorizationService,
         },
+        menu_permissions::{
+            repository::MySqlMenuPermissionRepository, service::DefaultMenuPermissionService,
+        },
+        menus::{repository::MySqlMenuRepository, service::DefaultMenuService},
         permission::{repository::MySqlPermissionRepository, service::DefaultPermissionService},
         role::{repository::MySqlRoleRepository, service::DefaultRoleService},
         role_permission::{
@@ -41,6 +45,8 @@ pub async fn build_state() -> Result<AppState> {
     let user_role_repo = Arc::new(MySqlUserRoleRepository::new(Arc::new(db.clone())));
     let authorization_repo = Arc::new(MySqlAuthorizationRepository::new(Arc::new(db.clone())));
     let audit_log_repo = Arc::new(MySqlAuditLogRepository::new(db.clone()));
+    let menu_repo = Arc::new(MySqlMenuRepository::new(Arc::new(db.clone())));
+    let menu_permission_repo = Arc::new(MySqlMenuPermissionRepository::new(Arc::new(db.clone())));
 
     // infrastructure service
     let jwt = Arc::new(JwtService::new(&config));
@@ -74,6 +80,14 @@ pub async fn build_state() -> Result<AppState> {
         audit_log_service.clone(),
     ));
     let authorization_service = Arc::new(DefaultAuthorizationService::new(authorization_repo));
+    let menu_service = Arc::new(DefaultMenuService::new(
+        menu_repo,
+        audit_log_service.clone(),
+    ));
+    let menu_permission_service = Arc::new(DefaultMenuPermissionService::new(
+        menu_permission_repo,
+        audit_log_service.clone(),
+    ));
 
     let infra = Infrastructure {
         db,
@@ -96,6 +110,8 @@ pub async fn build_state() -> Result<AppState> {
             user_role: user_role_service,
             authorization: authorization_service,
             audit_logs: audit_log_service,
+            menu: menu_service,
+            menu_permissions: menu_permission_service,
         },
     })
 }

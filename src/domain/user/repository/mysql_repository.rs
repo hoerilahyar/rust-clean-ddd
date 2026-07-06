@@ -33,7 +33,8 @@ impl UserRepository for MySqlUserRepository {
             is_active,
             last_login_at,
             created_at,
-            updated_at
+            updated_at,
+            deleted_at
         FROM users
         WHERE deleted_at IS NULL AND id = ?
         "#,
@@ -107,7 +108,8 @@ impl UserRepository for MySqlUserRepository {
             is_active,
             last_login_at,
             created_at,
-            updated_at
+            updated_at,
+            deleted_at
         FROM users
         WHERE deleted_at IS NULL AND username = ?
         LIMIT 1
@@ -132,7 +134,8 @@ impl UserRepository for MySqlUserRepository {
             is_active,
             last_login_at,
             created_at,
-            updated_at
+            updated_at,
+            deleted_at
         FROM users
         WHERE deleted_at IS NULL AND email = ?
         LIMIT 1
@@ -172,7 +175,8 @@ impl UserRepository for MySqlUserRepository {
             is_active,
             last_login_at,
             created_at,
-            updated_at
+            updated_at,
+            deleted_at
         FROM users
         WHERE deleted_at IS NULL 
         "#,

@@ -5,8 +5,8 @@ use async_trait::async_trait;
 use sqlx::MySqlPool;
 
 use crate::domain::{
-    authorization::repository::AuthorizationRepository, permission::entity::Permission,
-    role::entity::Role, user::entity::User,
+    authorization::repository::AuthorizationRepository, menus::entity::Menu,
+    permission::entity::Permission, role::entity::Role, user::entity::User,
 };
 
 pub struct MySqlAuthorizationRepository {
@@ -33,9 +33,10 @@ impl AuthorizationRepository for MySqlAuthorizationRepository {
                 is_active,
                 last_login_at,
                 created_at,
-                updated_at
+                updated_at,
+                deleted_at
             FROM users
-            WHERE id = ?
+            WHERE deleted_at IS NULL AND id = ?
             LIMIT 1
             "#,
         )
@@ -111,5 +112,52 @@ impl AuthorizationRepository for MySqlAuthorizationRepository {
         let permissions = query.fetch_all(self.db.as_ref()).await?;
 
         Ok(permissions)
+    }
+
+    async fn find_menus(&self, role_ids: &[u64]) -> Result<Vec<Menu>> {
+        if role_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let placeholders = std::iter::repeat("?")
+            .take(role_ids.len())
+            .collect::<Vec<_>>()
+            .join(",");
+
+        let sql = format!(
+            r#"
+            SELECT DISTINCT
+                m.id,
+                m.parent_id,
+                m.name,
+                m.icon,
+                m.path,
+                m.sort_order,
+                m.is_active,
+                m.created_at,
+                m.updated_at
+            FROM role_permissions rp
+            INNER JOIN menu_permissions mp
+                ON mp.permission_id = rp.permission_id
+            INNER JOIN menus m
+                ON m.id = mp.menu_id
+            WHERE rp.role_id IN ({})
+            AND m.is_active = TRUE
+            ORDER BY
+                m.sort_order,
+                m.id
+        "#,
+            placeholders
+        );
+
+        let mut query = sqlx::query_as::<_, Menu>(&sql);
+
+        for role_id in role_ids {
+            query = query.bind(role_id);
+        }
+
+        let menus = query.fetch_all(self.db.as_ref()).await?;
+
+        Ok(menus)
     }
 }

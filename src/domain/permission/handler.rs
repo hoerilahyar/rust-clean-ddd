@@ -8,7 +8,9 @@ use validator::Validate;
 use crate::{
     bootstrap::state::AppState,
     common::{
-        error::app_error::AppError, extractor::CurrentUser, response::api_response::ApiResponse,
+        error::app_error::AppError,
+        extractor::{CurrentUser, ValidatedJson},
+        response::api_response::ApiResponse,
     },
     domain::permission::{
         dto::{
@@ -21,7 +23,7 @@ use crate::{
 
 #[utoipa::path(
     post,
-    path = "/api/v1/permissions",
+    path = "/api/v1/iam/permissions",
     tag = "Permission",
     request_body = CreatePermissionRequest,
     responses(
@@ -49,7 +51,7 @@ pub async fn create(
     State(state): State<AppState>,
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
     headers: HeaderMap,
-    Json(request): Json<CreatePermissionRequest>,
+    ValidatedJson(request): ValidatedJson<CreatePermissionRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<u64>>), AppError> {
     current_user.require(PermissionCode::PermissionCreate)?;
 
@@ -83,7 +85,7 @@ pub async fn create(
 
 #[utoipa::path(
     put,
-    path = "/api/v1/permissions/{id}",
+    path = "/api/v1/iam/permissions/{id}",
     tag = "Permission",
     params(
         ("id" = u64, Path, description = "Permission ID")
@@ -118,7 +120,7 @@ pub async fn update(
     Path(id): Path<u64>,
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
     headers: HeaderMap,
-    Json(request): Json<UpdatePermissionRequest>,
+    ValidatedJson(request): ValidatedJson<UpdatePermissionRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<()>>), AppError> {
     current_user.require(PermissionCode::PermissionUpdate)?;
 
@@ -155,7 +157,7 @@ pub async fn update(
 
 #[utoipa::path(
     delete,
-    path = "/api/v1/permissions/{id}",
+    path = "/api/v1/iam/permissions/{id}",
     tag = "Permission",
     params(
         ("id" = u64, Path, description = "Permission ID")
@@ -211,7 +213,7 @@ pub async fn delete(
 
 #[utoipa::path(
     get,
-    path = "/api/v1/permissions/{id}",
+    path = "/api/v1/iam/permissions/{id}",
     tag = "Permission",
     params(
         ("id" = u64, Path, description = "Permission ID")
@@ -261,7 +263,7 @@ pub async fn find_by_id(
 
 #[utoipa::path(
     get,
-    path = "/api/v1/permissions",
+    path = "/api/v1/iam/permissions",
     tag = "Permission",
     params(ListPermissionRequest),
     responses(

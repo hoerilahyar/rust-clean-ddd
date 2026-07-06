@@ -55,6 +55,7 @@ impl PermissionRepository for MySqlPermissionRepository {
             r#"
         UPDATE permissions
         SET
+            code = ?,
             name = ?,
             description = ?,
             is_active = ?,
@@ -62,6 +63,7 @@ impl PermissionRepository for MySqlPermissionRepository {
         WHERE id = ?
         "#,
         )
+        .bind(&permission.code)
         .bind(&permission.name)
         .bind(&permission.description)
         .bind(permission.is_active)

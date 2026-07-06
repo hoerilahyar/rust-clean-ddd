@@ -46,6 +46,18 @@ use utoipa::OpenApi;
         // Audit Log
         crate::domain::audit_log::handler::list_audit_logs,
         crate::domain::audit_log::handler::get_audit_log,
+
+        // Menu
+        crate::domain::menus::handler::create,
+        crate::domain::menus::handler::update,
+        crate::domain::menus::handler::delete,
+        crate::domain::menus::handler::find_by_id,
+        crate::domain::menus::handler::list,
+
+        // Menu Permission
+        crate::domain::menu_permissions::handler::assign,
+        crate::domain::menu_permissions::handler::revoke,
+        crate::domain::menu_permissions::handler::list,
         
     ),
     tags(
@@ -57,6 +69,8 @@ use utoipa::OpenApi;
         (name = "Role Permission", description = "Role permission management"),
         (name = "User Role", description = "User role management"),
         (name = "Audit Log", description = "Audit log"),
+        (name = "Menu", description = "Menu management"),
+        (name = "Menu Permission", description = "Menu permission"),
     )
 )]
 pub struct ApiDoc;

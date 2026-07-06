@@ -8,7 +8,9 @@ use validator::Validate;
 use crate::{
     bootstrap::state::AppState,
     common::{
-        error::app_error::AppError, extractor::CurrentUser, response::api_response::ApiResponse,
+        error::app_error::AppError,
+        extractor::{CurrentUser, ValidatedJson},
+        response::api_response::ApiResponse,
     },
     domain::{
         permission::entity::PermissionCode,
@@ -21,7 +23,7 @@ use crate::{
 
 #[utoipa::path(
     post,
-    path = "/api/v1/roles",
+    path = "/api/v1/iam/roles",
     tag = "Role",
     request_body = CreateRoleRequest,
     responses(
@@ -49,7 +51,7 @@ pub async fn create(
     State(state): State<AppState>,
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
     headers: HeaderMap,
-    Json(request): Json<CreateRoleRequest>,
+    ValidatedJson(request): ValidatedJson<CreateRoleRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<u64>>), AppError> {
     current_user.require(PermissionCode::RoleCreate)?;
 
@@ -83,7 +85,7 @@ pub async fn create(
 
 #[utoipa::path(
     put,
-    path = "/api/v1/roles/{id}",
+    path = "/api/v1/iam/roles/{id}",
     tag = "Role",
     params(
         ("id" = u64, Path, description = "Role ID")
@@ -118,7 +120,7 @@ pub async fn update(
     Path(id): Path<u64>,
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
     headers: HeaderMap,
-    Json(request): Json<UpdateRoleRequest>,
+    ValidatedJson(request): ValidatedJson<UpdateRoleRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<()>>), AppError> {
     current_user.require(PermissionCode::RoleUpdate)?;
 
@@ -153,7 +155,7 @@ pub async fn update(
 
 #[utoipa::path(
     delete,
-    path = "/api/v1/roles/{id}",
+    path = "/api/v1/iam/roles/{id}",
     tag = "Role",
     params(
         ("id" = u64, Path, description = "Role ID")
@@ -207,7 +209,7 @@ pub async fn delete(
 
 #[utoipa::path(
     get,
-    path = "/api/v1/roles/{id}",
+    path = "/api/v1/iam/roles/{id}",
     tag = "Role",
     params(
         ("id" = u64, Path, description = "Role ID")
@@ -257,7 +259,7 @@ pub async fn find_by_id(
 
 #[utoipa::path(
     get,
-    path = "/api/v1/roles",
+    path = "/api/v1/iam/roles",
     tag = "Role",
     params(ListRoleRequest),
     responses(

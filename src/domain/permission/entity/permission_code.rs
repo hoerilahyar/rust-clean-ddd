@@ -1,5 +1,7 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PermissionCode {
+    AuthorizeMe,
+
     UserCreate,
     UserRead,
     UserUpdate,
@@ -24,11 +26,22 @@ pub enum PermissionCode {
     UserRoleRead,
 
     AuditLogRead,
+
+    MenuCreate,
+    MenuRead,
+    MenuUpdate,
+    MenuDelete,
+
+    MenuPermissionAssign,
+    MenuPermissionRead,
+    MenuPermissionRevoke,
 }
 
 impl PermissionCode {
     pub fn as_str(&self) -> &'static str {
         match self {
+            Self::AuthorizeMe => "AUTHORIZE_ME",
+
             Self::UserCreate => "USER_CREATE",
             Self::UserRead => "USER_READ",
             Self::UserUpdate => "USER_UPDATE",
@@ -53,6 +66,15 @@ impl PermissionCode {
             Self::UserRoleRead => "USER_ROLE_READ",
 
             Self::AuditLogRead => "AUDIT_LOG_READ",
+
+            Self::MenuCreate => "MENU_CREATE",
+            Self::MenuRead => "MENU_READ",
+            Self::MenuUpdate => "MENU_UPDATE",
+            Self::MenuDelete => "MENU_DELETE",
+
+            Self::MenuPermissionAssign => "MENU_PERMISSION_ASSIGN",
+            Self::MenuPermissionRead => "MENU_PERMISSION_READ",
+            Self::MenuPermissionRevoke => "MENU_PERMISSION_REVOKE",
         }
     }
 }

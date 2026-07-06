@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::domain::role::entity::Role;
+use crate::domain::user_role::entity::Role;
 
 #[async_trait]
 pub trait UserRoleRepository: Send + Sync {

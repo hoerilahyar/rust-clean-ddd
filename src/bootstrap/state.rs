@@ -6,9 +6,11 @@ use crate::{
     config::Config,
     domain::{
         audit_log::service::AuditLogService, auth::service::AuthService,
-        authorization::service::AuthorizationService, permission::service::PermissionService,
-        role::service::RoleService, role_permission::service::RolePermissionService,
-        user::service::UserService, user_role::service::UserRoleService,
+        authorization::service::AuthorizationService,
+        menu_permissions::service::MenuPermissionService, menus::service::MenuService,
+        permission::service::PermissionService, role::service::RoleService,
+        role_permission::service::RolePermissionService, user::service::UserService,
+        user_role::service::UserRoleService,
     },
     infrastructure::security::JwtService,
 };
@@ -31,6 +33,8 @@ pub struct Services {
     pub user_role: Arc<dyn UserRoleService>,
     pub authorization: Arc<dyn AuthorizationService>,
     pub audit_logs: Arc<dyn AuditLogService>,
+    pub menu: Arc<dyn MenuService>,
+    pub menu_permissions: Arc<dyn MenuPermissionService>,
 }
 
 #[derive(Clone)]

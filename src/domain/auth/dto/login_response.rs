@@ -1,7 +1,7 @@
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use crate::infrastructure::security::TokenPair;
+use crate::{domain::auth::entity::MenuContext, infrastructure::security::TokenPair};
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct LoginResponse {
@@ -20,4 +20,5 @@ pub struct LoginUser {
     pub roles: Vec<String>,
 
     pub permissions: Vec<String>,
+    pub menus: Vec<MenuContext>,
 }

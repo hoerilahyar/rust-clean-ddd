@@ -2,6 +2,8 @@ use serde::Deserialize;
 use utoipa::ToSchema;
 use validator::Validate;
 
+use crate::common::extractor::RequiredFields;
+
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct CreatePermissionRequest {
     #[validate(length(min = 3, max = 50))]
@@ -19,5 +21,11 @@ pub struct CreatePermissionRequest {
     #[validate(length(max = 255))]
     pub description: Option<String>,
 
-    pub is_active: bool,
+    pub is_active: Option<bool>,
+}
+
+impl RequiredFields for CreatePermissionRequest {
+    fn required_fields() -> &'static [&'static str] {
+        &["code", "name", "resource", "action"]
+    }
 }

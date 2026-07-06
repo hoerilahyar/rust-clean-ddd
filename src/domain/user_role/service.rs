@@ -5,9 +5,9 @@ use async_trait::async_trait;
 
 use crate::domain::{
     audit_log::service::{AuditLogService, RecordAuditLogInput},
-    role::entity::Role,
     user_role::{
         dto::{AssignUserRoleRequest, UserRoleResponse},
+        entity::Role,
         repository::UserRoleRepository,
     },
 };

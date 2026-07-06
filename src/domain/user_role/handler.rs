@@ -8,7 +8,9 @@ use validator::Validate;
 use crate::{
     bootstrap::state::AppState,
     common::{
-        error::app_error::AppError, extractor::CurrentUser, response::api_response::ApiResponse,
+        error::app_error::AppError,
+        extractor::{CurrentUser, ValidatedJson},
+        response::api_response::ApiResponse,
     },
     domain::{
         permission::entity::PermissionCode,
@@ -18,7 +20,7 @@ use crate::{
 
 #[utoipa::path(
     post,
-    path = "/api/v1/users/{user_id}/roles",
+    path = "/api/v1/iam/users/{user_id}/roles",
     tag = "User Role",
     params(
         ("user_id" = u64, Path, description = "User ID")
@@ -45,7 +47,7 @@ pub async fn assign(
     Path(user_id): Path<u64>,
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
     headers: HeaderMap,
-    Json(request): Json<AssignUserRoleRequest>,
+    ValidatedJson(request): ValidatedJson<AssignUserRoleRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<()>>), AppError> {
     current_user.require(PermissionCode::UserRoleAssign)?;
 
@@ -80,7 +82,7 @@ pub async fn assign(
 
 #[utoipa::path(
     delete,
-    path = "/api/v1/users/{user_id}/roles/{role_id}",
+    path = "/api/v1/iam/users/{user_id}/roles/{role_id}",
     tag = "User Role",
     params(
         ("user_id" = u64, Path, description = "User ID"),
@@ -133,7 +135,7 @@ pub async fn revoke(
 
 #[utoipa::path(
     get,
-    path = "/api/v1/users/{user_id}/roles",
+    path = "/api/v1/iam/users/{user_id}/roles",
     tag = "User Role",
     params(
         ("user_id" = u64, Path, description = "User ID")

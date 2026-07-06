@@ -5,6 +5,7 @@ use sqlx::MySqlPool;
 use crate::domain::auth::dto::RefreshTokenRequest;
 use crate::domain::auth::entity::{AuthUser, Permission, RefreshToken, Role};
 use crate::domain::auth::repository::auth_repository::AuthRepository;
+use crate::domain::menus::entity::Menu;
 
 pub struct MySqlAuthRepository {
     pool: MySqlPool,
@@ -257,5 +258,52 @@ impl AuthRepository for MySqlAuthRepository {
         .await?;
 
         Ok(())
+    }
+
+    async fn find_menus(&self, role_ids: &[u64]) -> Result<Vec<Menu>> {
+        if role_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let placeholders = std::iter::repeat("?")
+            .take(role_ids.len())
+            .collect::<Vec<_>>()
+            .join(",");
+
+        let sql = format!(
+            r#"
+            SELECT DISTINCT
+                m.id,
+                m.parent_id,
+                m.name,
+                m.icon,
+                m.path,
+                m.sort_order,
+                m.is_active,
+                m.created_at,
+                m.updated_at
+            FROM role_permissions rp
+            INNER JOIN menu_permissions mp
+                ON mp.permission_id = rp.permission_id
+            INNER JOIN menus m
+                ON m.id = mp.menu_id
+            WHERE rp.role_id IN ({})
+            AND m.is_active = TRUE
+            ORDER BY
+                m.sort_order,
+                m.id
+        "#,
+            placeholders
+        );
+
+        let mut query = sqlx::query_as::<_, Menu>(&sql);
+
+        for role_id in role_ids {
+            query = query.bind(role_id);
+        }
+
+        let menus = query.fetch_all(&self.pool).await?;
+
+        Ok(menus)
     }
 }

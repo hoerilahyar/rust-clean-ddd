@@ -94,7 +94,7 @@ impl DefaultPermissionService {
             resource: request.resource.clone(),
             action: request.action.clone(),
             description: request.description.clone(),
-            is_active: request.is_active,
+            is_active: request.is_active.unwrap_or(true),
             created_at: now,
             updated_at: now,
         };
@@ -109,9 +109,10 @@ impl DefaultPermissionService {
             .await?
             .ok_or_else(|| anyhow!("Permission not found"))?;
 
+        permission.code = request.code.clone().unwrap_or(permission.code);
         permission.name = request.name.clone();
         permission.description = request.description.clone();
-        permission.is_active = request.is_active;
+        permission.is_active = request.is_active.clone().unwrap_or(permission.is_active);
         permission.updated_at = Utc::now();
 
         self.repository.update(&permission).await

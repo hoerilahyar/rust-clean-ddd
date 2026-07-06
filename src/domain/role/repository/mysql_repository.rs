@@ -51,6 +51,7 @@ impl RoleRepository for MySqlRoleRepository {
             r#"
             UPDATE roles
             SET
+                code = ?,
                 name = ?,
                 description = ?,
                 is_active = ?,
@@ -58,6 +59,7 @@ impl RoleRepository for MySqlRoleRepository {
             WHERE id = ?
             "#,
         )
+        .bind(&role.code)
         .bind(&role.name)
         .bind(&role.description)
         .bind(role.is_active)

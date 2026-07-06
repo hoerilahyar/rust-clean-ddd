@@ -5,7 +5,7 @@ use async_trait::async_trait;
 
 use crate::domain::authorization::{
     dto::{AuthorizeRequest, AuthorizeResponse, CurrentUser},
-    entity::PermissionContext,
+    entity::{MenuContext, PermissionContext},
     repository::AuthorizationRepository,
 };
 
@@ -43,6 +43,8 @@ impl AuthorizationService for DefaultAuthorizationService {
 
         let permissions = self.repository.find_permissions(&role_ids).await?;
 
+        let menus = self.repository.find_menus(&role_ids).await?;
+
         Ok(AuthorizeResponse {
             context: PermissionContext {
                 user_id: user.id,
@@ -50,6 +52,17 @@ impl AuthorizationService for DefaultAuthorizationService {
                 fullname: user.fullname,
                 roles: roles.iter().map(|r| r.code.clone()).collect(),
                 permissions: permissions.iter().map(|p| p.code.clone()).collect(),
+                menus: menus
+                    .iter()
+                    .map(|m| MenuContext {
+                        id: m.id,
+                        parent_id: m.parent_id,
+                        name: m.name.clone(),
+                        path: Some(m.path.clone()),
+                        icon: m.icon.clone(),
+                        sort_order: m.sort_order,
+                    })
+                    .collect(),
             },
         })
     }
@@ -63,6 +76,7 @@ impl AuthorizationService for DefaultAuthorizationService {
             fullname: authorize.context.fullname,
             roles: authorize.context.roles,
             permissions: authorize.context.permissions,
+            menus: authorize.context.menus,
         })
     }
 
