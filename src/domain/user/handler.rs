@@ -15,8 +15,8 @@ use crate::{
     domain::{
         permission::entity::PermissionCode,
         user::dto::{
-            CreateUserRequest, GetUserRequest, ListUserRequest, UpdateUserRequest,
-            UserListResponse, UserResponse,
+            ChangePasswordRequest, CreateUserRequest, GetUserRequest, ListUserRequest,
+            UpdateUserRequest, UserListResponse, UserResponse,
         },
     },
 };
@@ -150,6 +150,47 @@ pub async fn update(
     Ok((
         StatusCode::OK,
         Json(ApiResponse::<()>::message("User updated successfully")),
+    ))
+}
+
+#[utoipa::path(
+    patch,
+    path = "/api/v1/users/password",
+    tag = "User",
+    request_body = ChangePasswordRequest,
+    responses(
+        (status = 200, description = "Password changed successfully"),
+        (status = 400, description = "Validation error or incorrect current password"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub async fn change_password(
+    current_user: CurrentUser,
+    State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
+    headers: HeaderMap,
+    ValidatedJson(request): ValidatedJson<ChangePasswordRequest>,
+) -> Result<(StatusCode, Json<ApiResponse<()>>), AppError> {
+    request
+        .validate()
+        .map_err(|e| AppError::Validation(vec![("request".to_string(), e.to_string())]))?;
+
+    let ip_address = Some(addr.ip().to_string());
+    let user_agent = headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
+
+    state
+        .services
+        .user
+        .change_password(current_user.user_id(), request, ip_address, user_agent)
+        .await
+        .map_err(|e| AppError::BadRequest(e.to_string()))?;
+
+    Ok((
+        StatusCode::OK,
+        Json(ApiResponse::<()>::message("Password changed successfully")),
     ))
 }
 

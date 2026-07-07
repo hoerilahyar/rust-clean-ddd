@@ -49,6 +49,7 @@ pub mod audit_action {
     pub const USER_SETTING_DELETED: &str = "user_setting.deleted";
     pub const SESSION_REVOKED: &str = "session.revoked";
     pub const SESSION_REVOKED_OTHERS: &str = "session.revoked_others";
+    pub const USER_PASSWORD_CHANGED: &str = "user.password_changed";
 }
 
 pub mod audit_status {

@@ -1,9 +1,11 @@
+mod change_password_request;
 mod create_request;
 mod get_request;
 mod list_request;
 mod response;
 mod update_request;
 
+pub use change_password_request::*;
 pub use create_request::*;
 pub use get_request::*;
 pub use list_request::*;

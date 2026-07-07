@@ -12,8 +12,8 @@ use crate::{
         },
         user::{
             dto::{
-                CreateUserRequest, GetUserRequest, ListUserRequest, UpdateUserRequest,
-                UserListResponse, UserResponse,
+                ChangePasswordRequest, CreateUserRequest, GetUserRequest, ListUserRequest,
+                UpdateUserRequest, UserListResponse, UserResponse,
             },
             entity::{User, UserFilter},
             repository::UserRepository,
@@ -45,6 +45,14 @@ pub trait UserService: Send + Sync {
         &self,
         id: u64,
         actor_id: Option<u64>,
+        ip_address: Option<String>,
+        user_agent: Option<String>,
+    ) -> Result<()>;
+
+    async fn change_password(
+        &self,
+        user_id: u64,
+        request: ChangePasswordRequest,
         ip_address: Option<String>,
         user_agent: Option<String>,
     ) -> Result<()>;
@@ -126,8 +134,37 @@ impl DefaultUserService {
 
         user.fullname = request.fullname.clone().unwrap_or(user.fullname);
         user.email = request.email.clone().unwrap_or(user.email);
-        user.password = request.password.clone().unwrap_or(user.password);
+        if let Some(new_password) = &request.password {
+            user.password = PasswordService::hash(new_password)?;
+        }
         user.is_active = request.is_active.unwrap_or(user.is_active);
+        user.updated_at = Utc::now();
+
+        self.repository.update(&user).await
+    }
+
+    async fn change_password_inner(
+        &self,
+        user_id: u64,
+        request: &ChangePasswordRequest,
+    ) -> Result<()> {
+        let mut user = self
+            .repository
+            .find_by_id(user_id)
+            .await?
+            .ok_or_else(|| anyhow!("User not found"))?;
+
+        if !PasswordService::verify(&request.current_password, &user.password) {
+            return Err(anyhow!("Current password is incorrect"));
+        }
+
+        if request.current_password == request.new_password {
+            return Err(anyhow!(
+                "New password must be different from the current password"
+            ));
+        }
+
+        user.password = PasswordService::hash(&request.new_password)?;
         user.updated_at = Utc::now();
 
         self.repository.update(&user).await
@@ -223,6 +260,35 @@ impl UserService for DefaultUserService {
                 action: audit_action::USER_DELETED.to_string(),
                 entity_type: Some("user".into()),
                 entity_id: Some(id.to_string()),
+                is_success: result.is_ok(),
+                ip_address,
+                user_agent,
+                metadata: result
+                    .as_ref()
+                    .err()
+                    .map(|e| serde_json::json!({ "error": e.to_string() })),
+            })
+            .await;
+
+        result
+    }
+
+    async fn change_password(
+        &self,
+        user_id: u64,
+        request: ChangePasswordRequest,
+        ip_address: Option<String>,
+        user_agent: Option<String>,
+    ) -> Result<()> {
+        let result = self.change_password_inner(user_id, &request).await;
+
+        self.audit_log_service
+            .record(RecordAuditLogInput {
+                actor_id: Some(user_id),
+                actor_email: None,
+                action: audit_action::USER_PASSWORD_CHANGED.to_string(),
+                entity_type: Some("user".into()),
+                entity_id: Some(user_id.to_string()),
                 is_success: result.is_ok(),
                 ip_address,
                 user_agent,
