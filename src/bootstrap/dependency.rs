@@ -20,6 +20,9 @@ use crate::{
         role_permission::{
             repository::MySqlRolePermissionRepository, service::DefaultRolePermissionService,
         },
+        system_settings::{
+            repository::MySqlSystemSettingRepository, services::DefaultSystemSettingService,
+        },
         user_role::{repository::MySqlUserRoleRepository, service::DefaultUserRoleService},
     },
     infrastructure::{database, security::JwtService},
@@ -47,6 +50,7 @@ pub async fn build_state() -> Result<AppState> {
     let audit_log_repo = Arc::new(MySqlAuditLogRepository::new(db.clone()));
     let menu_repo = Arc::new(MySqlMenuRepository::new(Arc::new(db.clone())));
     let menu_permission_repo = Arc::new(MySqlMenuPermissionRepository::new(Arc::new(db.clone())));
+    let system_setting_repo = Arc::new(MySqlSystemSettingRepository::new(Arc::new(db.clone())));
 
     // infrastructure service
     let jwt = Arc::new(JwtService::new(&config));
@@ -88,6 +92,10 @@ pub async fn build_state() -> Result<AppState> {
         menu_permission_repo,
         audit_log_service.clone(),
     ));
+    let system_setting_service = Arc::new(DefaultSystemSettingService::new(
+        system_setting_repo,
+        audit_log_service.clone(),
+    ));
 
     let infra = Infrastructure {
         db,
@@ -112,6 +120,7 @@ pub async fn build_state() -> Result<AppState> {
             audit_logs: audit_log_service,
             menu: menu_service,
             menu_permissions: menu_permission_service,
+            system_setting: system_setting_service,
         },
     })
 }

@@ -39,6 +39,10 @@ pub mod audit_action {
     pub const MENU_PERMISSION_ASSIGNED: &str = "menu.permission.assigned";
     pub const MENU_PERMISSION_REVOKE_PERMISSION: &str = "menu.permission.revoke_permission";
     pub const MENU_PERMISSION_REVOKE_ALL: &str = "menu.permission.revoke_all_permission";
+    pub const SETTING_UPSERTED: &str = "setting.upserted";
+    pub const SETTING_ACTIVATED: &str = "setting.activated";
+    pub const SETTING_DEACTIVATED: &str = "setting.deactivate";
+    pub const SETTING_DELETED: &str = "setting.deleted";
 }
 
 pub mod audit_status {

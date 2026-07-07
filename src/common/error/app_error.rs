@@ -1,3 +1,5 @@
+use std::fmt;
+
 use axum::{
     Json,
     http::StatusCode,
@@ -74,3 +76,28 @@ impl IntoResponse for AppError {
             .into_response()
     }
 }
+
+impl From<sqlx::Error> for AppError {
+    fn from(err: sqlx::Error) -> Self {
+        match err {
+            sqlx::Error::RowNotFound => AppError::NotFound("Data not found".to_string()),
+            other => AppError::Internal(other.to_string()),
+        }
+    }
+}
+
+impl fmt::Display for AppError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AppError::BadRequest(msg) => write!(f, "{msg}"),
+            AppError::Unauthorized(msg) => write!(f, "{msg}"),
+            AppError::Forbidden(msg) => write!(f, "{msg}"),
+            AppError::NotFound(msg) => write!(f, "{msg}"),
+            AppError::Conflict(msg) => write!(f, "{msg}"),
+            AppError::Validation(fields) => write!(f, "Validation error: {fields:?}"),
+            AppError::Internal(msg) => write!(f, "{msg}"),
+        }
+    }
+}
+
+impl std::error::Error for AppError {}

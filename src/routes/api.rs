@@ -2,16 +2,18 @@ use axum::Router;
 
 use crate::{
     bootstrap::state::AppState,
-    domain::{audit_log, auth, authorization, menus, permission, role, user, user_role},
+    domain::{
+        audit_log, auth, authorization, menus, permission, role, system_settings, user, user_role,
+    },
 };
 
 pub fn public_routes() -> Router<AppState> {
-    Router::new().nest("/auth", auth::routes::routes())
+    Router::new().nest("/auth", auth::routes::router())
 }
 
 pub fn protected_routes() -> Router<AppState> {
     Router::new()
-        .nest("/users", user::routes::routes())
+        .nest("/users", user::routes::router())
         .nest(
             "/iam",
             Router::new()
@@ -22,4 +24,5 @@ pub fn protected_routes() -> Router<AppState> {
                 .nest("/users", user_role::routes::router()),
         )
         .nest("/audit-logs", audit_log::routes::router())
+        .nest("/system-settings", system_settings::routes::router())
 }

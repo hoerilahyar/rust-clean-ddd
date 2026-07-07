@@ -35,6 +35,10 @@ pub enum PermissionCode {
     MenuPermissionAssign,
     MenuPermissionRead,
     MenuPermissionRevoke,
+
+    SystemSettingUpdate,
+    SystemSettingDelete,
+    SystemSettingRead,
 }
 
 impl PermissionCode {
@@ -75,6 +79,10 @@ impl PermissionCode {
             Self::MenuPermissionAssign => "MENU_PERMISSION_ASSIGN",
             Self::MenuPermissionRead => "MENU_PERMISSION_READ",
             Self::MenuPermissionRevoke => "MENU_PERMISSION_REVOKE",
+
+            Self::SystemSettingUpdate => "SYSTEM_SETTING_UPDATE",
+            Self::SystemSettingDelete => "SYSTEM_SETTING_DELETE",
+            Self::SystemSettingRead => "SYSTEM_SETTING_READ",
         }
     }
 }

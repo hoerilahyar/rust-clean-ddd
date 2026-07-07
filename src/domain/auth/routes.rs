@@ -2,7 +2,7 @@ use axum::{Router, routing::post};
 
 use crate::{bootstrap::state::AppState, domain::auth::handler};
 
-pub fn routes() -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/login", post(handler::login))
         .route("/refresh", post(handler::refresh_token))

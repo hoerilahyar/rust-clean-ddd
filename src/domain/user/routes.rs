@@ -5,7 +5,7 @@ use axum::{
 
 use crate::{bootstrap::state::AppState, domain::user::handler};
 
-pub fn routes() -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", post(handler::create))
         .route("/", get(handler::list))

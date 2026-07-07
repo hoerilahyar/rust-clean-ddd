@@ -9,7 +9,8 @@ use crate::{
         authorization::service::AuthorizationService,
         menu_permissions::service::MenuPermissionService, menus::service::MenuService,
         permission::service::PermissionService, role::service::RoleService,
-        role_permission::service::RolePermissionService, user::service::UserService,
+        role_permission::service::RolePermissionService,
+        system_settings::services::SystemSettingService, user::service::UserService,
         user_role::service::UserRoleService,
     },
     infrastructure::security::JwtService,
@@ -35,6 +36,7 @@ pub struct Services {
     pub audit_logs: Arc<dyn AuditLogService>,
     pub menu: Arc<dyn MenuService>,
     pub menu_permissions: Arc<dyn MenuPermissionService>,
+    pub system_setting: Arc<dyn SystemSettingService>,
 }
 
 #[derive(Clone)]
