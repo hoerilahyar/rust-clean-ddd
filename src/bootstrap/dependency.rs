@@ -6,25 +6,25 @@ use crate::{
     bootstrap::state::{AppState, Infrastructure, Services},
     config::Config,
     domain::{
-        audit_log::{repository::MySqlAuditLogRepository, service::DefaultAuditLogService},
-        auth::{repository::mysql_repository::MySqlAuthRepository, service::DefaultAuthService},
+        audit_log::{repository::MySqlAuditLogRepository, services::DefaultAuditLogService},
+        auth::{repository::mysql_repository::MySqlAuthRepository, services::DefaultAuthService},
         authorization::{
-            repository::MySqlAuthorizationRepository, service::DefaultAuthorizationService,
+            repository::MySqlAuthorizationRepository, services::DefaultAuthorizationService,
         },
         menu_permissions::{
-            repository::MySqlMenuPermissionRepository, service::DefaultMenuPermissionService,
+            repository::MySqlMenuPermissionRepository, services::DefaultMenuPermissionService,
         },
-        menus::{repository::MySqlMenuRepository, service::DefaultMenuService},
-        permission::{repository::MySqlPermissionRepository, service::DefaultPermissionService},
-        role::{repository::MySqlRoleRepository, service::DefaultRoleService},
+        menus::{repository::MySqlMenuRepository, services::DefaultMenuService},
+        permission::{repository::MySqlPermissionRepository, services::DefaultPermissionService},
+        role::{repository::MySqlRoleRepository, services::DefaultRoleService},
         role_permission::{
-            repository::MySqlRolePermissionRepository, service::DefaultRolePermissionService,
+            repository::MySqlRolePermissionRepository, services::DefaultRolePermissionService,
         },
-        session::service::DefaultSessionService,
+        session::services::DefaultSessionService,
         system_settings::{
             repository::MySqlSystemSettingRepository, services::DefaultSystemSettingService,
         },
-        user_role::{repository::MySqlUserRoleRepository, service::DefaultUserRoleService},
+        user_role::{repository::MySqlUserRoleRepository, services::DefaultUserRoleService},
         user_setting::{
             repository::MySqlUserSettingRepository, services::DefaultUserSettingService,
         },
@@ -32,7 +32,7 @@ use crate::{
     infrastructure::{database, security::JwtService},
 };
 
-use crate::domain::user::{repository::MySqlUserRepository, service::DefaultUserService};
+use crate::domain::user::{repository::MySqlUserRepository, services::DefaultUserService};
 
 pub async fn build_state() -> Result<AppState> {
     let config = Config::load()?;

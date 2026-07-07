@@ -104,8 +104,6 @@ impl AuditLogRepository for MySqlAuditLogRepository {
 
         let count_sql = format!("SELECT COUNT(*) FROM audit_logs {}", where_clause);
 
-        // Filter dinamis: bind hanya kondisi yang ada (MySQL tidak
-        // mendukung "col = ? OR ? IS NULL" dengan casting fleksibel seperti Postgres).
         macro_rules! bind_filters {
             ($q:expr) => {{
                 let mut q = $q;

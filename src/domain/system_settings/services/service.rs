@@ -1,5 +1,3 @@
-// src/domain/system_settings/service.rs
-
 use anyhow::Result;
 use async_trait::async_trait;
 

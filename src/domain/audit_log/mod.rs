@@ -5,5 +5,5 @@ pub mod handler;
 pub mod mapper;
 pub mod repository;
 pub mod routes;
-pub mod service;
+pub mod services;
 pub mod validator;

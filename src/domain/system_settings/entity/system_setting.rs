@@ -37,7 +37,6 @@ impl std::fmt::Display for SettingDataType {
     }
 }
 
-// Row mentah persis kolom di database — data_type dibaca sebagai String
 #[derive(Debug, Clone, FromRow)]
 pub struct SystemSettingRow {
     pub id: u64,
@@ -52,7 +51,6 @@ pub struct SystemSettingRow {
     pub deleted_at: Option<NaiveDateTime>,
 }
 
-// Entity domain yang dipakai di service/repository trait
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemSetting {
     pub id: u64,

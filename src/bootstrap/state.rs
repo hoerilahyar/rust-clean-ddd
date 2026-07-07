@@ -5,13 +5,13 @@ use sqlx::MySqlPool;
 use crate::{
     config::Config,
     domain::{
-        audit_log::service::AuditLogService, auth::service::AuthService,
-        authorization::service::AuthorizationService,
-        menu_permissions::service::MenuPermissionService, menus::service::MenuService,
-        permission::service::PermissionService, role::service::RoleService,
-        role_permission::service::RolePermissionService, session::service::SessionService,
-        system_settings::services::SystemSettingService, user::service::UserService,
-        user_role::service::UserRoleService, user_setting::services::UserSettingService,
+        audit_log::services::AuditLogService, auth::services::AuthService,
+        authorization::services::AuthorizationService,
+        menu_permissions::services::MenuPermissionService, menus::services::MenuService,
+        permission::services::PermissionService, role::services::RoleService,
+        role_permission::services::RolePermissionService, session::services::SessionService,
+        system_settings::services::SystemSettingService, user::services::UserService,
+        user_role::services::UserRoleService, user_setting::services::UserSettingService,
     },
     infrastructure::security::JwtService,
 };

@@ -7,7 +7,7 @@ use chrono::Utc;
 use crate::domain::{
     audit_log::{
         entity::audit_action,
-        service::{AuditLogService, RecordAuditLogInput},
+        services::{AuditLogService, RecordAuditLogInput},
     },
     role::{
         dto::{
@@ -16,40 +16,9 @@ use crate::domain::{
         },
         entity::{Role, RoleFilter},
         repository::RoleRepository,
+        services::RoleService,
     },
 };
-
-#[async_trait]
-pub trait RoleService: Send + Sync {
-    async fn create(
-        &self,
-        request: CreateRoleRequest,
-        actor_id: Option<u64>,
-        ip_address: Option<String>,
-        user_agent: Option<String>,
-    ) -> Result<u64>;
-
-    async fn update(
-        &self,
-        id: u64,
-        request: UpdateRoleRequest,
-        actor_id: Option<u64>,
-        ip_address: Option<String>,
-        user_agent: Option<String>,
-    ) -> Result<()>;
-
-    async fn delete(
-        &self,
-        id: u64,
-        actor_id: Option<u64>,
-        ip_address: Option<String>,
-        user_agent: Option<String>,
-    ) -> Result<()>;
-
-    async fn find_by_id(&self, request: GetRoleRequest) -> Result<RoleResponse>;
-
-    async fn list(&self, request: ListRoleRequest) -> Result<RoleListResponse>;
-}
 
 pub struct DefaultRoleService {
     repository: Arc<dyn RoleRepository>,

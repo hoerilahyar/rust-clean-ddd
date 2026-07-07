@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::domain::{
     audit_log::{
         entity::audit_action,
-        service::{AuditLogService, RecordAuditLogInput},
+        services::{AuditLogService, RecordAuditLogInput},
     },
     user_setting::{
         dto::{

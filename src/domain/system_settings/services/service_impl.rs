@@ -1,5 +1,3 @@
-// src/application/system_settings/service_impl.rs
-
 use std::sync::Arc;
 
 use anyhow::{Result, anyhow};
@@ -9,7 +7,7 @@ use uuid::Uuid;
 use crate::domain::{
     audit_log::{
         entity::audit_action,
-        service::{AuditLogService, RecordAuditLogInput},
+        services::{AuditLogService, RecordAuditLogInput},
     },
     system_settings::{
         dto::{
@@ -66,7 +64,6 @@ impl DefaultSystemSettingService {
             )
             .await?;
 
-        // dipakai buat metadata before/after di audit log
         let _ = existing;
 
         Ok(setting)

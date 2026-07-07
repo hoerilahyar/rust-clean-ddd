@@ -6,41 +6,11 @@ use async_trait::async_trait;
 use crate::domain::{
     audit_log::{
         entity::audit_action,
-        service::{AuditLogService, RecordAuditLogInput},
+        services::{AuditLogService, RecordAuditLogInput},
     },
     auth::{entity::RefreshToken, repository::auth_repository::AuthRepository},
-    session::dto::SessionResponse,
+    session::{dto::SessionResponse, services::SessionService},
 };
-
-#[async_trait]
-pub trait SessionService: Send + Sync {
-    /// Lists all active (not revoked, not expired) sessions/devices for a user.
-    /// `current_device_id`, if provided, is used to flag which entry is the caller's own session.
-    async fn list(
-        &self,
-        user_id: u64,
-        current_device_id: Option<String>,
-    ) -> Result<Vec<SessionResponse>>;
-
-    /// Revokes a single session by id. Fails if the session doesn't belong to `user_id`.
-    async fn revoke(
-        &self,
-        user_id: u64,
-        session_id: u64,
-        ip_address: Option<String>,
-        user_agent: Option<String>,
-    ) -> Result<()>;
-
-    /// Revokes every session for the user except the one matching `current_device_id`
-    /// ("log out from all other devices").
-    async fn revoke_others(
-        &self,
-        user_id: u64,
-        current_device_id: String,
-        ip_address: Option<String>,
-        user_agent: Option<String>,
-    ) -> Result<()>;
-}
 
 pub struct DefaultSessionService {
     repository: Arc<dyn AuthRepository>,
@@ -48,14 +18,21 @@ pub struct DefaultSessionService {
 }
 
 impl DefaultSessionService {
-    pub fn new(repository: Arc<dyn AuthRepository>, audit_log_service: Arc<dyn AuditLogService>) -> Self {
+    pub fn new(
+        repository: Arc<dyn AuthRepository>,
+        audit_log_service: Arc<dyn AuditLogService>,
+    ) -> Self {
         Self {
             repository,
             audit_log_service,
         }
     }
 
-    fn map_response(&self, session: RefreshToken, current_device_id: Option<&str>) -> SessionResponse {
+    fn map_response(
+        &self,
+        session: RefreshToken,
+        current_device_id: Option<&str>,
+    ) -> SessionResponse {
         let is_current = current_device_id
             .map(|id| id == session.device_id)
             .unwrap_or(false);

@@ -53,8 +53,6 @@ impl IntoResponse for AppError {
             }
 
             AppError::Internal(message) => {
-                // Log pesan error asli agar terlihat di terminal/log,
-                // tapi jangan bocorkan detailnya ke response client.
                 error!("Internal server error: {message}");
 
                 (

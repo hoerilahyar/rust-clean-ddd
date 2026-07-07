@@ -2,33 +2,13 @@ use std::sync::Arc;
 
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
-use serde_json::Value;
 
 use crate::domain::audit_log::dto::{AuditLogListResponse, AuditLogQueryRequest, AuditLogResponse};
 use crate::domain::audit_log::entity::audit_status;
 use crate::domain::audit_log::errors::AuditLogError;
 use crate::domain::audit_log::mapper;
 use crate::domain::audit_log::repository::{AuditLogFilter, AuditLogRepository, NewAuditLog};
-
-#[derive(Debug, Clone)]
-pub struct RecordAuditLogInput {
-    pub actor_id: Option<u64>,
-    pub actor_email: Option<String>,
-    pub action: String,
-    pub entity_type: Option<String>,
-    pub entity_id: Option<String>,
-    pub is_success: bool,
-    pub ip_address: Option<String>,
-    pub user_agent: Option<String>,
-    pub metadata: Option<Value>,
-}
-
-#[async_trait]
-pub trait AuditLogService: Send + Sync {
-    async fn record(&self, input: RecordAuditLogInput);
-    async fn get_by_id(&self, id: u64) -> Result<AuditLogResponse>;
-    async fn list(&self, query: AuditLogQueryRequest) -> Result<AuditLogListResponse>;
-}
+use crate::domain::audit_log::services::{AuditLogService, RecordAuditLogInput};
 
 pub struct DefaultAuditLogService {
     repository: Arc<dyn AuditLogRepository>,
@@ -42,9 +22,6 @@ impl DefaultAuditLogService {
 
 #[async_trait]
 impl AuditLogService for DefaultAuditLogService {
-    /// Dipanggil dari service module lain (auth, rbac, user).
-    /// Sengaja tidak mengembalikan Result ke caller — kegagalan menyimpan
-    /// audit log tidak boleh menggagalkan business flow utama.
     async fn record(&self, input: RecordAuditLogInput) {
         let status = if input.is_success {
             audit_status::SUCCESS

@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use chrono::{Duration, Utc};
 
 use crate::domain::audit_log::entity::audit_action;
-use crate::domain::audit_log::service::{AuditLogService, RecordAuditLogInput};
+use crate::domain::audit_log::services::{AuditLogService, RecordAuditLogInput};
 use crate::domain::auth::dto::{
     LoginRequest, LoginResponse, LoginUser, RefreshTokenRequest, RefreshTokenResponse,
 };
@@ -16,42 +16,12 @@ use crate::domain::auth::entity::{AuthUser, MenuContext, Permission, RefreshToke
 use crate::domain::auth::errors::AuthError;
 use crate::domain::auth::repository::auth_repository::AuthRepository;
 
+use crate::domain::auth::services::AuthService;
 use crate::domain::menus::entity::Menu;
 use crate::infrastructure::security::jwt::JwtService;
 use crate::infrastructure::security::password::PasswordService;
 
 use crate::infrastructure::security::TokenPair;
-
-#[async_trait]
-pub trait AuthService: Send + Sync {
-    async fn login(
-        &self,
-        request: LoginRequest,
-        ip_address: Option<String>,
-        user_agent: Option<String>,
-    ) -> Result<LoginResponse>;
-
-    async fn refresh_token(
-        &self,
-        request: RefreshTokenRequest,
-        ip_address: Option<String>,
-        user_agent: Option<String>,
-    ) -> Result<RefreshTokenResponse>;
-
-    async fn logout(
-        &self,
-        refresh_token: RefreshTokenRequest,
-        ip_address: Option<String>,
-        user_agent: Option<String>,
-    ) -> Result<()>;
-
-    async fn logout_all(
-        &self,
-        user_id: u64,
-        ip_address: Option<String>,
-        user_agent: Option<String>,
-    ) -> Result<()>;
-}
 
 pub struct DefaultAuthService {
     repository: Arc<dyn AuthRepository>,
@@ -229,8 +199,6 @@ impl AuthService for DefaultAuthService {
         ip_address: Option<String>,
         user_agent: Option<String>,
     ) -> Result<LoginResponse> {
-        // Verifikasi kredensial terpisah dari alur utama supaya kegagalan
-        // login (kredensial salah / user inactive) tetap tercatat sebagai audit log "failed".
         let user = match self.verify_login(&request).await {
             Ok(user) => user,
             Err(err) => {

@@ -18,8 +18,6 @@ pub struct AuditLog {
     pub created_at: DateTime<Utc>,
 }
 
-/// Konstanta nama action, dipakai module lain (auth, rbac, user)
-/// supaya penulisan action string konsisten dan tidak typo.
 pub mod audit_action {
     pub const AUTH_LOGIN: &str = "auth.login";
     pub const AUTH_LOGOUT: &str = "auth.logout";
