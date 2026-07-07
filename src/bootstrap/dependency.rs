@@ -11,6 +11,14 @@ use crate::{
         authorization::{
             repository::MySqlAuthorizationRepository, services::DefaultAuthorizationService,
         },
+        master_data::{
+            groups::{
+                repository::MySqlMasterDataGroupRepository, services::DefaultMasterDataGroupService,
+            },
+            items::{
+                repository::MySqlMasterDataItemsRepository, services::DefaultMasterDataItemsService,
+            },
+        },
         menu_permissions::{
             repository::MySqlMenuPermissionRepository, services::DefaultMenuPermissionService,
         },
@@ -56,6 +64,10 @@ pub async fn build_state() -> Result<AppState> {
     let menu_permission_repo = Arc::new(MySqlMenuPermissionRepository::new(Arc::new(db.clone())));
     let system_setting_repo = Arc::new(MySqlSystemSettingRepository::new(Arc::new(db.clone())));
     let user_setting_repo = Arc::new(MySqlUserSettingRepository::new(Arc::new(db.clone())));
+    let master_data_group_repo =
+        Arc::new(MySqlMasterDataGroupRepository::new(Arc::new(db.clone())));
+    let master_data_items_repo =
+        Arc::new(MySqlMasterDataItemsRepository::new(Arc::new(db.clone())));
     let session_auth_repository = auth_repository.clone();
 
     // infrastructure service
@@ -110,6 +122,16 @@ pub async fn build_state() -> Result<AppState> {
         session_auth_repository,
         audit_log_service.clone(),
     ));
+    let master_data_group_service = Arc::new(DefaultMasterDataGroupService::new(
+        master_data_group_repo.clone(),
+        master_data_items_repo.clone(),
+        audit_log_service.clone(),
+    ));
+    let master_data_items_service = Arc::new(DefaultMasterDataItemsService::new(
+        master_data_items_repo.clone(),
+        master_data_group_repo.clone(),
+        audit_log_service.clone(),
+    ));
 
     let infra = Infrastructure {
         db,
@@ -137,6 +159,8 @@ pub async fn build_state() -> Result<AppState> {
             system_setting: system_setting_service,
             user_setting: user_setting_service,
             session: session_service,
+            master_group: master_data_group_service,
+            master_items: master_data_items_service,
         },
     })
 }

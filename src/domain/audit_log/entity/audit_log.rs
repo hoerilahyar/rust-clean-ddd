@@ -48,6 +48,13 @@ pub mod audit_action {
     pub const SESSION_REVOKED: &str = "session.revoked";
     pub const SESSION_REVOKED_OTHERS: &str = "session.revoked_others";
     pub const USER_PASSWORD_CHANGED: &str = "user.password_changed";
+
+    pub const MASTER_DATA_GROUP_CREATED: &str = "master_data.group_created";
+    pub const MASTER_DATA_GROUP_UPDATED: &str = "master_data.group_updated";
+    pub const MASTER_DATA_GROUP_DELETED: &str = "master_data.group_deleted";
+    pub const MASTER_DATA_ITEM_CREATED: &str = "master_data.item_created";
+    pub const MASTER_DATA_ITEM_UPDATED: &str = "master_data.item_updated";
+    pub const MASTER_DATA_ITEM_DELETED: &str = "master_data.item_deleted";
 }
 
 pub mod audit_status {

@@ -5,13 +5,22 @@ use sqlx::MySqlPool;
 use crate::{
     config::Config,
     domain::{
-        audit_log::services::AuditLogService, auth::services::AuthService,
+        audit_log::services::AuditLogService,
+        auth::services::AuthService,
         authorization::services::AuthorizationService,
-        menu_permissions::services::MenuPermissionService, menus::services::MenuService,
-        permission::services::PermissionService, role::services::RoleService,
-        role_permission::services::RolePermissionService, session::services::SessionService,
-        system_settings::services::SystemSettingService, user::services::UserService,
-        user_role::services::UserRoleService, user_setting::services::UserSettingService,
+        master_data::{
+            groups::services::MasterDataGroupService, items::services::MasterDataItemsService,
+        },
+        menu_permissions::services::MenuPermissionService,
+        menus::services::MenuService,
+        permission::services::PermissionService,
+        role::services::RoleService,
+        role_permission::services::RolePermissionService,
+        session::services::SessionService,
+        system_settings::services::SystemSettingService,
+        user::services::UserService,
+        user_role::services::UserRoleService,
+        user_setting::services::UserSettingService,
     },
     infrastructure::security::JwtService,
 };
@@ -39,6 +48,8 @@ pub struct Services {
     pub system_setting: Arc<dyn SystemSettingService>,
     pub user_setting: Arc<dyn UserSettingService>,
     pub session: Arc<dyn SessionService>,
+    pub master_group: Arc<dyn MasterDataGroupService>,
+    pub master_items: Arc<dyn MasterDataItemsService>,
 }
 
 #[derive(Clone)]

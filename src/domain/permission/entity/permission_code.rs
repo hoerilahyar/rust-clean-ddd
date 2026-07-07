@@ -39,6 +39,16 @@ pub enum PermissionCode {
     SystemSettingUpdate,
     SystemSettingDelete,
     SystemSettingRead,
+
+    MasterDataGroupCreate,
+    MasterDataGroupRead,
+    MasterDataGroupUpdate,
+    MasterDataGroupDelete,
+
+    MasterDataItemCreate,
+    MasterDataItemRead,
+    MasterDataItemUpdate,
+    MasterDataItemDelete,
 }
 
 impl PermissionCode {
@@ -83,6 +93,16 @@ impl PermissionCode {
             Self::SystemSettingUpdate => "SYSTEM_SETTING_UPDATE",
             Self::SystemSettingDelete => "SYSTEM_SETTING_DELETE",
             Self::SystemSettingRead => "SYSTEM_SETTING_READ",
+
+            Self::MasterDataGroupCreate => "MASTER_DATA_GROUP_CREATE",
+            Self::MasterDataGroupRead => "MASTER_DATA_GROUP_READ",
+            Self::MasterDataGroupUpdate => "MASTER_DATA_GROUP_UPDATE",
+            Self::MasterDataGroupDelete => "MASTER_DATA_GROUP_DELETE",
+
+            Self::MasterDataItemCreate => "MASTER_DATA_ITEM_CREATE",
+            Self::MasterDataItemRead => "MASTER_DATA_ITEM_READ",
+            Self::MasterDataItemUpdate => "MASTER_DATA_ITEM_UPDATE",
+            Self::MasterDataItemDelete => "MASTER_DATA_ITEM_DELETE",
         }
     }
 }

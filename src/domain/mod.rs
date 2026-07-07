@@ -1,6 +1,7 @@
 pub mod audit_log;
 pub mod auth;
 pub mod authorization;
+pub mod master_data;
 pub mod menu_permissions;
 pub mod menus;
 pub mod permission;

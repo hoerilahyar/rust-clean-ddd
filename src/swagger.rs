@@ -78,6 +78,21 @@ use utoipa::OpenApi;
         crate::domain::session::handler::revoke,
         crate::domain::session::handler::revoke_others,
 
+        // Master Data Groups
+        crate::domain::master_data::groups::handler::create_group,
+        crate::domain::master_data::groups::handler::update_group,
+        crate::domain::master_data::groups::handler::delete_group,
+        crate::domain::master_data::groups::handler::find_group_by_code,
+        crate::domain::master_data::groups::handler::list_groups,
+
+        // Master Data Items
+        crate::domain::master_data::items::handler::create_item,
+        crate::domain::master_data::items::handler::update_item,
+        crate::domain::master_data::items::handler::delete_item,
+        crate::domain::master_data::items::handler::find_item_by_id,
+        crate::domain::master_data::items::handler::list_items,
+        crate::domain::master_data::items::handler::list_options,
+
     ),
     tags(
         (name = "Authentication", description = "Authentication endpoints"),
@@ -93,6 +108,8 @@ use utoipa::OpenApi;
         (name = "System Setting", description = "System Setting"),
         (name = "User Setting", description = "User Setting"),
         (name = "Session", description = "Session"),
+        (name = "Master Data Groups", description = "Master/reference data groups for dropdowns and lookups"),
+        (name = "Master Data Items", description = "Master/reference data items for dropdowns and lookups"),
     )
 )]
 pub struct ApiDoc;
