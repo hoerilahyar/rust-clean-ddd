@@ -58,7 +58,21 @@ use utoipa::OpenApi;
         crate::domain::menu_permissions::handler::assign,
         crate::domain::menu_permissions::handler::revoke,
         crate::domain::menu_permissions::handler::list,
-        
+
+        // System Setting
+        crate::domain::system_settings::handler::upsert,
+        crate::domain::system_settings::handler::set_active,
+        crate::domain::system_settings::handler::delete,
+        crate::domain::system_settings::handler::find_by_key,
+        crate::domain::system_settings::handler::list,
+
+        // User Setting
+        crate::domain::user_setting::handler::upsert,
+        crate::domain::user_setting::handler::set_active,
+        crate::domain::user_setting::handler::delete,
+        crate::domain::user_setting::handler::find_by_key,
+        crate::domain::user_setting::handler::list,
+
     ),
     tags(
         (name = "Authentication", description = "Authentication endpoints"),
@@ -71,6 +85,8 @@ use utoipa::OpenApi;
         (name = "Audit Log", description = "Audit log"),
         (name = "Menu", description = "Menu management"),
         (name = "Menu Permission", description = "Menu permission"),
+        (name = "System Setting", description = "System Setting"),
+        (name = "User Setting", description = "User Setting"),
     )
 )]
 pub struct ApiDoc;

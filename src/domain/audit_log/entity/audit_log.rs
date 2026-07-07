@@ -43,6 +43,10 @@ pub mod audit_action {
     pub const SETTING_ACTIVATED: &str = "setting.activated";
     pub const SETTING_DEACTIVATED: &str = "setting.deactivate";
     pub const SETTING_DELETED: &str = "setting.deleted";
+    pub const USER_SETTING_UPSERTED: &str = "user_setting.upserted";
+    pub const USER_SETTING_ACTIVATED: &str = "user_setting.activated";
+    pub const USER_SETTING_DEACTIVATED: &str = "user_setting.deactivated";
+    pub const USER_SETTING_DELETED: &str = "user_setting.deleted";
 }
 
 pub mod audit_status {

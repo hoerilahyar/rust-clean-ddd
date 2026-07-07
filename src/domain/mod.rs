@@ -9,3 +9,4 @@ pub mod role_permission;
 pub mod system_settings;
 pub mod user;
 pub mod user_role;
+pub mod user_setting;
