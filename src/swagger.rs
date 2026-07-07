@@ -73,6 +73,11 @@ use utoipa::OpenApi;
         crate::domain::user_setting::handler::find_by_key,
         crate::domain::user_setting::handler::list,
 
+        // Session
+        crate::domain::session::handler::list,
+        crate::domain::session::handler::revoke,
+        crate::domain::session::handler::revoke_others,
+
     ),
     tags(
         (name = "Authentication", description = "Authentication endpoints"),
@@ -87,6 +92,7 @@ use utoipa::OpenApi;
         (name = "Menu Permission", description = "Menu permission"),
         (name = "System Setting", description = "System Setting"),
         (name = "User Setting", description = "User Setting"),
+        (name = "Session", description = "Session"),
     )
 )]
 pub struct ApiDoc;

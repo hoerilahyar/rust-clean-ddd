@@ -306,4 +306,47 @@ impl AuthRepository for MySqlAuthRepository {
 
         Ok(menus)
     }
+
+    async fn find_active_sessions(&self, user_id: u64) -> Result<Vec<RefreshToken>> {
+        let sessions = sqlx::query_as::<_, RefreshToken>(
+            r#"
+        SELECT id, user_id, device_id, ip_address, token, expired_at, revoked_at, created_at
+        FROM refresh_tokens
+        WHERE user_id = ? AND revoked_at IS NULL AND expired_at > UTC_TIMESTAMP()
+        ORDER BY created_at DESC
+        "#,
+        )
+        .bind(user_id)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(sessions)
+    }
+
+    async fn find_refresh_token_by_id(&self, id: u64) -> Result<Option<RefreshToken>> {
+        let session = sqlx::query_as::<_, RefreshToken>(
+            r#"
+        SELECT id, user_id, device_id, ip_address, token, expired_at, revoked_at, created_at
+        FROM refresh_tokens WHERE id = ?
+        "#,
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(session)
+    }
+
+    async fn revoke_all_except(&self, user_id: u64, device_id: &str) -> Result<()> {
+        sqlx::query(
+            r#"
+        UPDATE refresh_tokens
+        SET revoked_at = UTC_TIMESTAMP()
+        WHERE user_id = ? AND device_id != ? AND revoked_at IS NULL
+        "#,
+        )
+        .bind(user_id)
+        .bind(device_id)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
 }
