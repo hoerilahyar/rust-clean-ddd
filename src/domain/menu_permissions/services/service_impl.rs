@@ -1,31 +1,43 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::Result;
 use async_trait::async_trait;
 
-use crate::domain::{
-    audit_log::services::{AuditLogService, RecordAuditLogInput},
-    menu_permissions::{
-        dto::{AssignMenuPermissionRequest, MenuPermissionResponse},
-        repository::MenuPermissionRepository,
-        services::MenuPermissionService,
+use crate::{
+    domain::{
+        audit_log::services::{AuditLogService, RecordAuditLogInput},
+        menu_permissions::{
+            dto::{AssignMenuPermissionRequest, MenuPermissionResponse},
+            repository::MenuPermissionRepository,
+            services::MenuPermissionService,
+        },
     },
+    infrastructure::cache::CacheHelper,
 };
+
+const MENU_PERMISSION_LIST_TTL: Duration = Duration::from_secs(120);
 
 pub struct DefaultMenuPermissionService {
     repository: Arc<dyn MenuPermissionRepository>,
+    cache: CacheHelper,
     audit_log_service: Arc<dyn AuditLogService>,
 }
 
 impl DefaultMenuPermissionService {
     pub fn new(
         repository: Arc<dyn MenuPermissionRepository>,
+        cache: CacheHelper,
         audit_log_service: Arc<dyn AuditLogService>,
     ) -> Self {
         Self {
             repository,
+            cache,
             audit_log_service,
         }
+    }
+
+    fn list_cache_key(menu_id: u64) -> String {
+        format!("menu_permission:list:{menu_id}")
     }
 }
 
@@ -43,6 +55,10 @@ impl MenuPermissionService for DefaultMenuPermissionService {
             .repository
             .assign(menu_id, &request.permission_ids)
             .await;
+
+        if result.is_ok() {
+            self.cache.invalidate(&Self::list_cache_key(menu_id)).await;
+        }
 
         self.audit_log_service
             .record(RecordAuditLogInput {
@@ -74,6 +90,10 @@ impl MenuPermissionService for DefaultMenuPermissionService {
     ) -> Result<()> {
         let result = self.repository.revoke(menu_id, permission_id).await;
 
+        if result.is_ok() {
+            self.cache.invalidate(&Self::list_cache_key(menu_id)).await;
+        }
+
         self.audit_log_service
             .record(RecordAuditLogInput {
                 actor_id,
@@ -95,14 +115,29 @@ impl MenuPermissionService for DefaultMenuPermissionService {
     }
 
     async fn list(&self, menu_id: u64) -> Result<Vec<MenuPermissionResponse>> {
-        let items = self.repository.find_permissions(menu_id).await?;
+        let cache_key = Self::list_cache_key(menu_id);
 
-        Ok(items
+        if let Some(cached) = self
+            .cache
+            .get_json::<Vec<MenuPermissionResponse>>(&cache_key)
+            .await
+        {
+            return Ok(cached);
+        }
+
+        let items = self.repository.find_permissions(menu_id).await?;
+        let response: Vec<MenuPermissionResponse> = items
             .into_iter()
             .map(|item| MenuPermissionResponse {
                 menu_id: item.menu_id,
                 permission_id: item.permission_id,
             })
-            .collect())
+            .collect();
+
+        self.cache
+            .set_json(&cache_key, &response, Some(MENU_PERMISSION_LIST_TTL))
+            .await;
+
+        Ok(response)
     }
 }

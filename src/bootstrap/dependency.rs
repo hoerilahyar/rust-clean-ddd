@@ -37,7 +37,11 @@ use crate::{
             repository::MySqlUserSettingRepository, services::DefaultUserSettingService,
         },
     },
-    infrastructure::{database, security::JwtService},
+    infrastructure::{
+        cache::{CacheHelper, CacheRepository, RedisCacheRepository, redis as redis_conn},
+        database,
+        security::JwtService,
+    },
 };
 
 use crate::domain::user::{repository::MySqlUserRepository, services::DefaultUserService};
@@ -47,7 +51,9 @@ pub async fn build_state() -> Result<AppState> {
 
     let db = database::connect(&config).await?;
 
-    // let redis = cache::redis::connect(&config).await?;
+    let redis = redis_conn::connect(&config).await?;
+    let cache_repo: Arc<dyn CacheRepository> = Arc::new(RedisCacheRepository::new(redis.clone()));
+    let cache = CacheHelper::new(cache_repo);
 
     // let storage = Arc::new(Uploader::new(&config));
 
@@ -87,55 +93,66 @@ pub async fn build_state() -> Result<AppState> {
     ));
     let role_service = Arc::new(DefaultRoleService::new(
         role_repo,
+        cache.clone(),
         audit_log_service.clone(),
     ));
     let permission_service = Arc::new(DefaultPermissionService::new(
         permission_repo,
+        cache.clone(),
         audit_log_service.clone(),
     ));
     let role_permission_service = Arc::new(DefaultRolePermissionService::new(
         role_permission_repo,
+        cache.clone(),
         audit_log_service.clone(),
     ));
     let user_role_service = Arc::new(DefaultUserRoleService::new(
         user_role_repo,
+        cache.clone(),
         audit_log_service.clone(),
     ));
     let authorization_service = Arc::new(DefaultAuthorizationService::new(authorization_repo));
     let menu_service = Arc::new(DefaultMenuService::new(
         menu_repo,
+        cache.clone(),
         audit_log_service.clone(),
     ));
     let menu_permission_service = Arc::new(DefaultMenuPermissionService::new(
         menu_permission_repo,
+        cache.clone(),
         audit_log_service.clone(),
     ));
     let system_setting_service = Arc::new(DefaultSystemSettingService::new(
         system_setting_repo,
+        cache.clone(),
         audit_log_service.clone(),
     ));
     let user_setting_service = Arc::new(DefaultUserSettingService::new(
         user_setting_repo,
+        cache.clone(),
         audit_log_service.clone(),
     ));
     let session_service = Arc::new(DefaultSessionService::new(
         session_auth_repository,
+        cache.clone(),
         audit_log_service.clone(),
     ));
     let master_data_group_service = Arc::new(DefaultMasterDataGroupService::new(
         master_data_group_repo.clone(),
         master_data_items_repo.clone(),
+        cache.clone(),
         audit_log_service.clone(),
     ));
     let master_data_items_service = Arc::new(DefaultMasterDataItemsService::new(
         master_data_items_repo.clone(),
         master_data_group_repo.clone(),
+        cache.clone(),
         audit_log_service.clone(),
     ));
 
     let infra = Infrastructure {
         db,
-        // redis,
+        redis,
         // storage,
         jwt,
     };

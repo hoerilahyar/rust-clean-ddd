@@ -1,39 +1,51 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use chrono::Utc;
 
-use crate::domain::{
-    audit_log::{
-        entity::audit_action,
-        services::{AuditLogService, RecordAuditLogInput},
-    },
-    permission::{
-        dto::{
-            CreatePermissionRequest, GetPermissionRequest, ListPermissionRequest,
-            PermissionListResponse, PermissionResponse, UpdatePermissionRequest,
+use crate::{
+    domain::{
+        audit_log::{
+            entity::audit_action,
+            services::{AuditLogService, RecordAuditLogInput},
         },
-        entity::{Permission, PermissionFilter},
-        repository::PermissionRepository,
-        services::PermissionService,
+        permission::{
+            dto::{
+                CreatePermissionRequest, GetPermissionRequest, ListPermissionRequest,
+                PermissionListResponse, PermissionResponse, UpdatePermissionRequest,
+            },
+            entity::{Permission, PermissionFilter},
+            repository::PermissionRepository,
+            services::PermissionService,
+        },
     },
+    infrastructure::cache::CacheHelper,
 };
+
+const PERMISSION_DETAIL_TTL: Duration = Duration::from_secs(300);
 
 pub struct DefaultPermissionService {
     repository: Arc<dyn PermissionRepository>,
+    cache: CacheHelper,
     audit_log_service: Arc<dyn AuditLogService>,
 }
 
 impl DefaultPermissionService {
     pub fn new(
         repository: Arc<dyn PermissionRepository>,
+        cache: CacheHelper,
         audit_log_service: Arc<dyn AuditLogService>,
     ) -> Self {
         Self {
             repository,
+            cache,
             audit_log_service,
         }
+    }
+
+    fn detail_cache_key(id: u64) -> String {
+        format!("permission:{id}")
     }
 
     fn map_response(&self, permission: Permission) -> PermissionResponse {
@@ -131,6 +143,10 @@ impl PermissionService for DefaultPermissionService {
     ) -> Result<()> {
         let result = self.update_inner(id, &request).await;
 
+        if result.is_ok() {
+            self.cache.invalidate(&Self::detail_cache_key(id)).await;
+        }
+
         self.audit_log_service
             .record(RecordAuditLogInput {
                 actor_id,
@@ -161,6 +177,10 @@ impl PermissionService for DefaultPermissionService {
     ) -> Result<()> {
         let result = self.repository.delete(id).await;
 
+        if result.is_ok() {
+            self.cache.invalidate(&Self::detail_cache_key(id)).await;
+        }
+
         self.audit_log_service
             .record(RecordAuditLogInput {
                 actor_id,
@@ -182,13 +202,24 @@ impl PermissionService for DefaultPermissionService {
     }
 
     async fn find_by_id(&self, request: GetPermissionRequest) -> Result<PermissionResponse> {
+        let cache_key = Self::detail_cache_key(request.id);
+
+        if let Some(cached) = self.cache.get_json::<PermissionResponse>(&cache_key).await {
+            return Ok(cached);
+        }
+
         let permission = self
             .repository
             .find_by_id(request.id)
             .await?
             .ok_or_else(|| anyhow!("Permission not found"))?;
 
-        Ok(self.map_response(permission))
+        let response = self.map_response(permission);
+        self.cache
+            .set_json(&cache_key, &response, Some(PERMISSION_DETAIL_TTL))
+            .await;
+
+        Ok(response)
     }
 
     async fn list(&self, request: ListPermissionRequest) -> Result<PermissionListResponse> {

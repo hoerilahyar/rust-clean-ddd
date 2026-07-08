@@ -1,9 +1,9 @@
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct MasterDataItemResponse {
     pub id: u64,
     pub group_id: u64,
@@ -18,7 +18,7 @@ pub struct MasterDataItemResponse {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct MasterDataItemListResponse {
     pub items: Vec<MasterDataItemResponse>,
 

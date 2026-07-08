@@ -1,37 +1,45 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::domain::{
-    audit_log::{
-        entity::audit_action,
-        services::{AuditLogService, RecordAuditLogInput},
-    },
-    user_setting::{
-        dto::{
-            ListUserSettingRequest, UpsertUserSettingRequest, UserSettingListResponse,
-            UserSettingResponse,
+use crate::{
+    domain::{
+        audit_log::{
+            entity::audit_action,
+            services::{AuditLogService, RecordAuditLogInput},
         },
-        entity::UserSetting,
-        repository::UserSettingRepository,
-        services::UserSettingService,
+        user_setting::{
+            dto::{
+                ListUserSettingRequest, UpsertUserSettingRequest, UserSettingListResponse,
+                UserSettingResponse,
+            },
+            entity::UserSetting,
+            repository::UserSettingRepository,
+            services::UserSettingService,
+        },
     },
+    infrastructure::cache::CacheHelper,
 };
+
+const USER_SETTING_LIST_TTL: Duration = Duration::from_secs(120);
 
 pub struct DefaultUserSettingService {
     repository: Arc<dyn UserSettingRepository>,
+    cache: CacheHelper,
     audit_log_service: Arc<dyn AuditLogService>,
 }
 
 impl DefaultUserSettingService {
     pub fn new(
         repository: Arc<dyn UserSettingRepository>,
+        cache: CacheHelper,
         audit_log_service: Arc<dyn AuditLogService>,
     ) -> Self {
         Self {
             repository,
+            cache,
             audit_log_service,
         }
     }
@@ -47,6 +55,10 @@ impl DefaultUserSettingService {
             created_at: setting.created_at.and_utc(),
             updated_at: setting.updated_at.map(|dt| dt.and_utc()),
         }
+    }
+
+    fn list_cache_key(user_id: u64) -> String {
+        format!("user_setting:list:{user_id}")
     }
 
     async fn upsert_inner(
@@ -83,6 +95,10 @@ impl UserSettingService for DefaultUserSettingService {
             .flatten();
 
         let result = self.upsert_inner(user_id, &request).await;
+
+        if result.is_ok() {
+            self.cache.invalidate(&Self::list_cache_key(user_id)).await;
+        }
 
         self.audit_log_service
             .record(RecordAuditLogInput {
@@ -121,6 +137,10 @@ impl UserSettingService for DefaultUserSettingService {
     ) -> Result<()> {
         let result = self.repository.set_active(user_id, key, is_active).await;
 
+        if result.is_ok() {
+            self.cache.invalidate(&Self::list_cache_key(user_id)).await;
+        }
+
         self.audit_log_service
             .record(RecordAuditLogInput {
                 actor_id: Some(user_id),
@@ -154,6 +174,10 @@ impl UserSettingService for DefaultUserSettingService {
     ) -> Result<()> {
         let marker = Uuid::new_v4().to_string();
         let result = self.repository.delete_by_key(user_id, key, &marker).await;
+
+        if result.is_ok() {
+            self.cache.invalidate(&Self::list_cache_key(user_id)).await;
+        }
 
         self.audit_log_service
             .record(RecordAuditLogInput {
@@ -190,12 +214,28 @@ impl UserSettingService for DefaultUserSettingService {
         user_id: u64,
         request: ListUserSettingRequest,
     ) -> Result<UserSettingListResponse> {
-        let settings = self.repository.find_all(user_id).await?;
+        let cache_key = Self::list_cache_key(user_id);
+
+        let settings = match self
+            .cache
+            .get_json::<Vec<UserSettingResponse>>(&cache_key)
+            .await
+        {
+            Some(cached) => cached,
+            None => {
+                let settings = self.repository.find_all(user_id).await?;
+                let mapped: Vec<UserSettingResponse> =
+                    settings.into_iter().map(|s| self.map_response(s)).collect();
+                self.cache
+                    .set_json(&cache_key, &mapped, Some(USER_SETTING_LIST_TTL))
+                    .await;
+                mapped
+            }
+        };
 
         let items = settings
             .into_iter()
             .filter(|s| request.is_active.map_or(true, |v| s.is_active == v))
-            .map(|s| self.map_response(s))
             .collect();
 
         Ok(UserSettingListResponse { items })

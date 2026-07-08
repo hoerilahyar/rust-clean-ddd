@@ -1,35 +1,43 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use chrono::Utc;
 
-use crate::domain::{
-    audit_log::{
-        entity::audit_action,
-        services::{AuditLogService, RecordAuditLogInput},
-    },
-    master_data::{
-        groups::{
-            dto::{MasterDataOptionListResponse, MasterDataOptionResponse},
-            entity::MasterDataGroup,
-            repository::MasterDataGroupRepository,
+use crate::{
+    domain::{
+        audit_log::{
+            entity::audit_action,
+            services::{AuditLogService, RecordAuditLogInput},
         },
-        items::{
-            dto::{
-                CreateMasterDataItemRequest, ListMasterDataItemRequest, MasterDataItemListResponse,
-                MasterDataItemResponse, UpdateMasterDataItemRequest,
+        master_data::{
+            groups::{
+                dto::{MasterDataOptionListResponse, MasterDataOptionResponse},
+                entity::MasterDataGroup,
+                repository::MasterDataGroupRepository,
             },
-            entity::{MasterDataItem, MasterDataItemFilter},
-            repository::MasterDataItemsRepository,
-            services::MasterDataItemsService,
+            items::{
+                dto::{
+                    CreateMasterDataItemRequest, ListMasterDataItemRequest,
+                    MasterDataItemListResponse, MasterDataItemResponse,
+                    UpdateMasterDataItemRequest,
+                },
+                entity::{MasterDataItem, MasterDataItemFilter},
+                repository::MasterDataItemsRepository,
+                services::MasterDataItemsService,
+            },
         },
     },
+    infrastructure::cache::CacheHelper,
 };
+
+const MASTER_DATA_GROUP_TTL: Duration = Duration::from_secs(300);
+const MASTER_DATA_OPTIONS_TTL: Duration = Duration::from_secs(180);
 
 pub struct DefaultMasterDataItemsService {
     repository: Arc<dyn MasterDataItemsRepository>,
     repository_group: Arc<dyn MasterDataGroupRepository>,
+    cache: CacheHelper,
     audit_log_service: Arc<dyn AuditLogService>,
 }
 
@@ -37,13 +45,26 @@ impl DefaultMasterDataItemsService {
     pub fn new(
         repository: Arc<dyn MasterDataItemsRepository>,
         repository_group: Arc<dyn MasterDataGroupRepository>,
+        cache: CacheHelper,
         audit_log_service: Arc<dyn AuditLogService>,
     ) -> Self {
         Self {
             repository,
             repository_group,
+            cache,
             audit_log_service,
         }
+    }
+
+    fn group_cache_key(code: &str) -> String {
+        format!("master_data_group:code:{code}")
+    }
+
+    fn options_cache_key(group_code: &str, parent_id: Option<u64>, only_root: bool) -> String {
+        let parent = parent_id
+            .map(|p| p.to_string())
+            .unwrap_or_else(|| "none".into());
+        format!("master_data:options:{group_code}:{parent}:{only_root}")
     }
 
     fn map_item(&self, item: MasterDataItem) -> MasterDataItemResponse {
@@ -71,10 +92,29 @@ impl DefaultMasterDataItemsService {
     }
 
     async fn require_group(&self, code: &str) -> Result<MasterDataGroup> {
-        self.repository_group
+        let cache_key = Self::group_cache_key(code);
+
+        if let Some(cached) = self.cache.get_json::<MasterDataGroup>(&cache_key).await {
+            return Ok(cached);
+        }
+
+        let group = self
+            .repository_group
             .find_group_by_code(code)
             .await?
-            .ok_or_else(|| anyhow!("Master data group '{code}' not found"))
+            .ok_or_else(|| anyhow!("Master data group '{code}' not found"))?;
+
+        self.cache
+            .set_json(&cache_key, &group, Some(MASTER_DATA_GROUP_TTL))
+            .await;
+
+        Ok(group)
+    }
+
+    async fn invalidate_options(&self, group_code: &str) {
+        self.cache
+            .invalidate_prefix(&format!("master_data:options:{group_code}:"))
+            .await;
     }
 
     async fn create_item_inner(
@@ -181,6 +221,10 @@ impl MasterDataItemsService for DefaultMasterDataItemsService {
         }
         .await;
 
+        if result.is_ok() {
+            self.invalidate_options(group_code).await;
+        }
+
         self.audit_log_service
             .record(RecordAuditLogInput {
                 actor_id,
@@ -218,6 +262,10 @@ impl MasterDataItemsService for DefaultMasterDataItemsService {
         }
         .await;
 
+        if result.is_ok() {
+            self.invalidate_options(group_code).await;
+        }
+
         self.audit_log_service
             .record(RecordAuditLogInput {
                 actor_id,
@@ -253,6 +301,10 @@ impl MasterDataItemsService for DefaultMasterDataItemsService {
             self.delete_item_inner(&group, item_id).await
         }
         .await;
+
+        if result.is_ok() {
+            self.invalidate_options(group_code).await;
+        }
 
         self.audit_log_service
             .record(RecordAuditLogInput {
@@ -328,6 +380,16 @@ impl MasterDataItemsService for DefaultMasterDataItemsService {
         parent_id: Option<u64>,
         only_root: bool,
     ) -> Result<MasterDataOptionListResponse> {
+        let cache_key = Self::options_cache_key(group_code, parent_id, only_root);
+
+        if let Some(cached) = self
+            .cache
+            .get_json::<MasterDataOptionListResponse>(&cache_key)
+            .await
+        {
+            return Ok(cached);
+        }
+
         let group = self.require_group(group_code).await?;
 
         let items = self
@@ -335,8 +397,14 @@ impl MasterDataItemsService for DefaultMasterDataItemsService {
             .list_options(group.id, parent_id, only_root)
             .await?;
 
-        Ok(MasterDataOptionListResponse {
+        let response = MasterDataOptionListResponse {
             items: items.into_iter().map(|i| self.map_option(i)).collect(),
-        })
+        };
+
+        self.cache
+            .set_json(&cache_key, &response, Some(MASTER_DATA_OPTIONS_TTL))
+            .await;
+
+        Ok(response)
     }
 }

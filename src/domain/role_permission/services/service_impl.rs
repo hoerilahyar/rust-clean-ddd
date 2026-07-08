@@ -1,31 +1,43 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::Result;
 use async_trait::async_trait;
 
-use crate::domain::{
-    audit_log::services::{AuditLogService, RecordAuditLogInput},
-    role_permission::{
-        dto::{AssignRolePermissionRequest, RolePermissionResponse},
-        repository::RolePermissionRepository,
-        services::RolePermissionService,
+use crate::{
+    domain::{
+        audit_log::services::{AuditLogService, RecordAuditLogInput},
+        role_permission::{
+            dto::{AssignRolePermissionRequest, RolePermissionResponse},
+            repository::RolePermissionRepository,
+            services::RolePermissionService,
+        },
     },
+    infrastructure::cache::CacheHelper,
 };
+
+const ROLE_PERMISSION_LIST_TTL: Duration = Duration::from_secs(120);
 
 pub struct DefaultRolePermissionService {
     repository: Arc<dyn RolePermissionRepository>,
+    cache: CacheHelper,
     audit_log_service: Arc<dyn AuditLogService>,
 }
 
 impl DefaultRolePermissionService {
     pub fn new(
         repository: Arc<dyn RolePermissionRepository>,
+        cache: CacheHelper,
         audit_log_service: Arc<dyn AuditLogService>,
     ) -> Self {
         Self {
             repository,
+            cache,
             audit_log_service,
         }
+    }
+
+    fn list_cache_key(role_id: u64) -> String {
+        format!("role_permission:list:{role_id}")
     }
 }
 
@@ -43,6 +55,10 @@ impl RolePermissionService for DefaultRolePermissionService {
             .repository
             .assign(role_id, &request.permission_ids)
             .await;
+
+        if result.is_ok() {
+            self.cache.invalidate(&Self::list_cache_key(role_id)).await;
+        }
 
         self.audit_log_service
             .record(RecordAuditLogInput {
@@ -74,6 +90,10 @@ impl RolePermissionService for DefaultRolePermissionService {
     ) -> Result<()> {
         let result = self.repository.revoke(role_id, permission_id).await;
 
+        if result.is_ok() {
+            self.cache.invalidate(&Self::list_cache_key(role_id)).await;
+        }
+
         self.audit_log_service
             .record(RecordAuditLogInput {
                 actor_id,
@@ -95,14 +115,29 @@ impl RolePermissionService for DefaultRolePermissionService {
     }
 
     async fn list(&self, role_id: u64) -> Result<Vec<RolePermissionResponse>> {
-        let items = self.repository.find_permissions(role_id).await?;
+        let cache_key = Self::list_cache_key(role_id);
 
-        Ok(items
+        if let Some(cached) = self
+            .cache
+            .get_json::<Vec<RolePermissionResponse>>(&cache_key)
+            .await
+        {
+            return Ok(cached);
+        }
+
+        let items = self.repository.find_permissions(role_id).await?;
+        let response: Vec<RolePermissionResponse> = items
             .into_iter()
             .map(|item| RolePermissionResponse {
                 role_id: item.role_id,
                 permission_id: item.permission_id,
             })
-            .collect())
+            .collect();
+
+        self.cache
+            .set_json(&cache_key, &response, Some(ROLE_PERMISSION_LIST_TTL))
+            .await;
+
+        Ok(response)
     }
 }

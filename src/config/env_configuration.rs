@@ -9,4 +9,9 @@ pub struct EnvConfig {
     pub mysql_password: String,
 
     pub jwt_secret: String,
+
+    pub redis_host: String,
+    pub redis_port: u16,
+    #[serde(default)]
+    pub redis_password: String,
 }

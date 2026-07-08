@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use redis::aio::ConnectionManager;
 use sqlx::MySqlPool;
 
 use crate::{
@@ -28,7 +29,7 @@ use crate::{
 #[derive(Clone)]
 pub struct Infrastructure {
     pub db: MySqlPool,
-    // pub redis: ConnectionManager,
+    pub redis: ConnectionManager,
     // pub storage: Arc<Uploader>,
     pub jwt: Arc<JwtService>,
 }

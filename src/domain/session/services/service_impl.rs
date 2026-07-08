@@ -1,29 +1,37 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 
-use crate::domain::{
-    audit_log::{
-        entity::audit_action,
-        services::{AuditLogService, RecordAuditLogInput},
+use crate::{
+    domain::{
+        audit_log::{
+            entity::audit_action,
+            services::{AuditLogService, RecordAuditLogInput},
+        },
+        auth::{entity::RefreshToken, repository::auth_repository::AuthRepository},
+        session::{dto::SessionResponse, services::SessionService},
     },
-    auth::{entity::RefreshToken, repository::auth_repository::AuthRepository},
-    session::{dto::SessionResponse, services::SessionService},
+    infrastructure::cache::CacheHelper,
 };
+
+const SESSION_LIST_TTL: Duration = Duration::from_secs(60);
 
 pub struct DefaultSessionService {
     repository: Arc<dyn AuthRepository>,
+    cache: CacheHelper,
     audit_log_service: Arc<dyn AuditLogService>,
 }
 
 impl DefaultSessionService {
     pub fn new(
         repository: Arc<dyn AuthRepository>,
+        cache: CacheHelper,
         audit_log_service: Arc<dyn AuditLogService>,
     ) -> Self {
         Self {
             repository,
+            cache,
             audit_log_service,
         }
     }
@@ -55,12 +63,26 @@ impl SessionService for DefaultSessionService {
         user_id: u64,
         current_device_id: Option<String>,
     ) -> Result<Vec<SessionResponse>> {
-        let sessions = self.repository.find_active_sessions(user_id).await?;
+        let key = format!("session:list:{user_id}");
 
-        Ok(sessions
+        if let Some(mut sessions) = self.cache.get_json::<Vec<SessionResponse>>(&key).await {
+            for s in sessions.iter_mut() {
+                s.is_current = current_device_id.as_deref() == Some(s.device_id.as_str());
+            }
+            return Ok(sessions);
+        }
+
+        let sessions = self.repository.find_active_sessions(user_id).await?;
+        let response: Vec<SessionResponse> = sessions
             .into_iter()
             .map(|s| self.map_response(s, current_device_id.as_deref()))
-            .collect())
+            .collect();
+
+        self.cache
+            .set_json(&key, &response, Some(SESSION_LIST_TTL))
+            .await;
+
+        Ok(response)
     }
 
     async fn revoke(
@@ -81,6 +103,12 @@ impl SessionService for DefaultSessionService {
             Some(_) => self.repository.revoke_refresh_token(session_id).await,
             None => Err(anyhow!("Session not found")),
         };
+
+        if result.is_ok() {
+            self.cache
+                .invalidate(&format!("session:list:{user_id}"))
+                .await;
+        }
 
         self.audit_log_service
             .record(RecordAuditLogInput {
@@ -113,6 +141,12 @@ impl SessionService for DefaultSessionService {
             .repository
             .revoke_all_except(user_id, &current_device_id)
             .await;
+
+        if result.is_ok() {
+            self.cache
+                .invalidate(&format!("session:list:{user_id}"))
+                .await;
+        }
 
         self.audit_log_service
             .record(RecordAuditLogInput {

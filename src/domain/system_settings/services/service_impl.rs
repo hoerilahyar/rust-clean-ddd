@@ -1,37 +1,47 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::domain::{
-    audit_log::{
-        entity::audit_action,
-        services::{AuditLogService, RecordAuditLogInput},
-    },
-    system_settings::{
-        dto::{
-            ListSystemSettingRequest, SystemSettingListResponse, SystemSettingResponse,
-            UpsertSystemSettingRequest,
+use crate::{
+    domain::{
+        audit_log::{
+            entity::audit_action,
+            services::{AuditLogService, RecordAuditLogInput},
         },
-        entity::SystemSetting,
-        repository::SystemSettingRepository,
-        services::SystemSettingService,
+        system_settings::{
+            dto::{
+                ListSystemSettingRequest, SystemSettingListResponse, SystemSettingResponse,
+                UpsertSystemSettingRequest,
+            },
+            entity::SystemSetting,
+            repository::SystemSettingRepository,
+            services::SystemSettingService,
+        },
     },
+    infrastructure::cache::CacheHelper,
 };
+
+const SYSTEM_SETTING_LIST_TTL: Duration = Duration::from_secs(300);
+const SYSTEM_SETTING_KEY_TTL: Duration = Duration::from_secs(300);
+const SYSTEM_SETTING_LIST_KEY: &str = "system_setting:list";
 
 pub struct DefaultSystemSettingService {
     repository: Arc<dyn SystemSettingRepository>,
+    cache: CacheHelper,
     audit_log_service: Arc<dyn AuditLogService>,
 }
 
 impl DefaultSystemSettingService {
     pub fn new(
         repository: Arc<dyn SystemSettingRepository>,
+        cache: CacheHelper,
         audit_log_service: Arc<dyn AuditLogService>,
     ) -> Self {
         Self {
             repository,
+            cache,
             audit_log_service,
         }
     }
@@ -48,6 +58,15 @@ impl DefaultSystemSettingService {
             created_at: setting.created_at.and_utc(),
             updated_at: setting.updated_at.map(|dt| dt.and_utc()),
         }
+    }
+
+    fn key_cache_key(key: &str) -> String {
+        format!("system_setting:key:{key}")
+    }
+
+    async fn invalidate_all(&self, key: &str) {
+        self.cache.invalidate(SYSTEM_SETTING_LIST_KEY).await;
+        self.cache.invalidate(&Self::key_cache_key(key)).await;
     }
 
     async fn upsert_inner(&self, request: &UpsertSystemSettingRequest) -> Result<SystemSetting> {
@@ -88,6 +107,10 @@ impl SystemSettingService for DefaultSystemSettingService {
 
         let result = self.upsert_inner(&request).await;
 
+        if result.is_ok() {
+            self.invalidate_all(&request.setting_key).await;
+        }
+
         self.audit_log_service
             .record(RecordAuditLogInput {
                 actor_id,
@@ -127,6 +150,10 @@ impl SystemSettingService for DefaultSystemSettingService {
     ) -> Result<()> {
         let result = self.repository.set_active(key, is_active).await;
 
+        if result.is_ok() {
+            self.invalidate_all(key).await;
+        }
+
         self.audit_log_service
             .record(RecordAuditLogInput {
                 actor_id,
@@ -161,6 +188,10 @@ impl SystemSettingService for DefaultSystemSettingService {
         let marker = Uuid::new_v4().to_string();
         let result = self.repository.delete_by_key(key, &marker).await;
 
+        if result.is_ok() {
+            self.invalidate_all(key).await;
+        }
+
         self.audit_log_service
             .record(RecordAuditLogInput {
                 actor_id,
@@ -182,23 +213,56 @@ impl SystemSettingService for DefaultSystemSettingService {
     }
 
     async fn find_by_key(&self, key: &str) -> Result<SystemSettingResponse> {
+        let cache_key = Self::key_cache_key(key);
+
+        if let Some(cached) = self
+            .cache
+            .get_json::<SystemSettingResponse>(&cache_key)
+            .await
+        {
+            return Ok(cached);
+        }
+
         let setting = self
             .repository
             .find_by_key(key)
             .await?
             .ok_or_else(|| anyhow!("Setting not found"))?;
 
-        Ok(self.map_response(setting))
+        let response = self.map_response(setting);
+        self.cache
+            .set_json(&cache_key, &response, Some(SYSTEM_SETTING_KEY_TTL))
+            .await;
+
+        Ok(response)
     }
 
     async fn list(&self, request: ListSystemSettingRequest) -> Result<SystemSettingListResponse> {
-        let settings = self.repository.find_all().await?;
+        let settings = match self
+            .cache
+            .get_json::<Vec<SystemSettingResponse>>(SYSTEM_SETTING_LIST_KEY)
+            .await
+        {
+            Some(cached) => cached,
+            None => {
+                let settings = self.repository.find_all().await?;
+                let mapped: Vec<SystemSettingResponse> =
+                    settings.into_iter().map(|s| self.map_response(s)).collect();
+                self.cache
+                    .set_json(
+                        SYSTEM_SETTING_LIST_KEY,
+                        &mapped,
+                        Some(SYSTEM_SETTING_LIST_TTL),
+                    )
+                    .await;
+                mapped
+            }
+        };
 
         let items = settings
             .into_iter()
             .filter(|s| request.is_active.map_or(true, |v| s.is_active == v))
             .filter(|s| request.is_public.map_or(true, |v| s.is_public == v))
-            .map(|s| self.map_response(s))
             .collect();
 
         Ok(SystemSettingListResponse { items })

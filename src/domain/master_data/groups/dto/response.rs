@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct MasterDataGroupResponse {
     pub id: u64,
     pub code: String,
@@ -15,7 +15,7 @@ pub struct MasterDataGroupResponse {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct MasterDataGroupListResponse {
     pub items: Vec<MasterDataGroupResponse>,
 
@@ -24,7 +24,7 @@ pub struct MasterDataGroupListResponse {
     pub total: u64,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct MasterDataOptionResponse {
     pub id: u64,
     pub code: String,
@@ -32,7 +32,7 @@ pub struct MasterDataOptionResponse {
     pub parent_id: Option<u64>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct MasterDataOptionListResponse {
     pub items: Vec<MasterDataOptionResponse>,
 }

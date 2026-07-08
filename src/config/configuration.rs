@@ -12,6 +12,7 @@ pub struct Config {
     pub cors: CorsConfig,
     pub pagination: PaginationConfig,
     pub upload: UploadConfig,
+    pub redis: RedisConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -47,6 +48,16 @@ pub struct DatabaseConfig {
     #[serde(skip)]
     pub username: String,
 
+    #[serde(skip)]
+    pub password: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct RedisConfig {
+    #[serde(skip)]
+    pub host: String,
+    #[serde(skip)]
+    pub port: u16,
     #[serde(skip)]
     pub password: String,
 }
@@ -107,6 +118,10 @@ impl Config {
         config.database.password = env.mysql_password;
 
         config.jwt.secret = env.jwt_secret;
+
+        config.redis.host = env.redis_host;
+        config.redis.port = env.redis_port;
+        config.redis.password = env.redis_password;
 
         Ok(config)
     }

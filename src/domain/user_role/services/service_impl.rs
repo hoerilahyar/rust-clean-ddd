@@ -1,32 +1,44 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::Result;
 use async_trait::async_trait;
 
-use crate::domain::{
-    audit_log::services::{AuditLogService, RecordAuditLogInput},
-    user_role::{
-        dto::{AssignUserRoleRequest, UserRoleResponse},
-        entity::Role,
-        repository::UserRoleRepository,
-        services::UserRoleService,
+use crate::{
+    domain::{
+        audit_log::services::{AuditLogService, RecordAuditLogInput},
+        user_role::{
+            dto::{AssignUserRoleRequest, UserRoleResponse},
+            entity::Role,
+            repository::UserRoleRepository,
+            services::UserRoleService,
+        },
     },
+    infrastructure::cache::CacheHelper,
 };
+
+const USER_ROLE_LIST_TTL: Duration = Duration::from_secs(120);
 
 pub struct DefaultUserRoleService {
     repository: Arc<dyn UserRoleRepository>,
+    cache: CacheHelper,
     audit_log_service: Arc<dyn AuditLogService>,
 }
 
 impl DefaultUserRoleService {
     pub fn new(
         repository: Arc<dyn UserRoleRepository>,
+        cache: CacheHelper,
         audit_log_service: Arc<dyn AuditLogService>,
     ) -> Self {
         Self {
             repository,
+            cache,
             audit_log_service,
         }
+    }
+
+    fn list_cache_key(user_id: u64) -> String {
+        format!("user_role:list:{user_id}")
     }
 
     fn map_response(role: Role) -> UserRoleResponse {
@@ -49,6 +61,10 @@ impl UserRoleService for DefaultUserRoleService {
         user_agent: Option<String>,
     ) -> Result<()> {
         let result = self.repository.assign(user_id, &request.role_ids).await;
+
+        if result.is_ok() {
+            self.cache.invalidate(&Self::list_cache_key(user_id)).await;
+        }
 
         self.audit_log_service
             .record(RecordAuditLogInput {
@@ -80,6 +96,10 @@ impl UserRoleService for DefaultUserRoleService {
     ) -> Result<()> {
         let result = self.repository.revoke(user_id, role_id).await;
 
+        if result.is_ok() {
+            self.cache.invalidate(&Self::list_cache_key(user_id)).await;
+        }
+
         self.audit_log_service
             .record(RecordAuditLogInput {
                 actor_id,
@@ -101,8 +121,23 @@ impl UserRoleService for DefaultUserRoleService {
     }
 
     async fn list(&self, user_id: u64) -> Result<Vec<UserRoleResponse>> {
-        let roles = self.repository.find_roles(user_id).await?;
+        let cache_key = Self::list_cache_key(user_id);
 
-        Ok(roles.into_iter().map(Self::map_response).collect())
+        if let Some(cached) = self
+            .cache
+            .get_json::<Vec<UserRoleResponse>>(&cache_key)
+            .await
+        {
+            return Ok(cached);
+        }
+
+        let roles = self.repository.find_roles(user_id).await?;
+        let response: Vec<UserRoleResponse> = roles.into_iter().map(Self::map_response).collect();
+
+        self.cache
+            .set_json(&cache_key, &response, Some(USER_ROLE_LIST_TTL))
+            .await;
+
+        Ok(response)
     }
 }

@@ -1,39 +1,51 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use chrono::Utc;
 
-use crate::domain::{
-    audit_log::{
-        entity::audit_action,
-        services::{AuditLogService, RecordAuditLogInput},
-    },
-    role::{
-        dto::{
-            CreateRoleRequest, GetRoleRequest, ListRoleRequest, RoleListResponse, RoleResponse,
-            UpdateRoleRequest,
+use crate::{
+    domain::{
+        audit_log::{
+            entity::audit_action,
+            services::{AuditLogService, RecordAuditLogInput},
         },
-        entity::{Role, RoleFilter},
-        repository::RoleRepository,
-        services::RoleService,
+        role::{
+            dto::{
+                CreateRoleRequest, GetRoleRequest, ListRoleRequest, RoleListResponse, RoleResponse,
+                UpdateRoleRequest,
+            },
+            entity::{Role, RoleFilter},
+            repository::RoleRepository,
+            services::RoleService,
+        },
     },
+    infrastructure::cache::CacheHelper,
 };
+
+const ROLE_DETAIL_TTL: Duration = Duration::from_secs(300);
 
 pub struct DefaultRoleService {
     repository: Arc<dyn RoleRepository>,
+    cache: CacheHelper,
     audit_log_service: Arc<dyn AuditLogService>,
 }
 
 impl DefaultRoleService {
     pub fn new(
         repository: Arc<dyn RoleRepository>,
+        cache: CacheHelper,
         audit_log_service: Arc<dyn AuditLogService>,
     ) -> Self {
         Self {
             repository,
             audit_log_service,
+            cache,
         }
+    }
+
+    fn detail_cache_key(id: u64) -> String {
+        format!("role:{id}")
     }
 
     fn map_response(&self, role: Role) -> RoleResponse {
@@ -125,6 +137,10 @@ impl RoleService for DefaultRoleService {
     ) -> Result<()> {
         let result = self.update_inner(id, &request).await;
 
+        if result.is_ok() {
+            self.cache.invalidate(&Self::detail_cache_key(id)).await;
+        }
+
         self.audit_log_service
             .record(RecordAuditLogInput {
                 actor_id,
@@ -155,6 +171,10 @@ impl RoleService for DefaultRoleService {
     ) -> Result<()> {
         let result = self.repository.delete(id).await;
 
+        if result.is_ok() {
+            self.cache.invalidate(&Self::detail_cache_key(id)).await;
+        }
+
         self.audit_log_service
             .record(RecordAuditLogInput {
                 actor_id,
@@ -176,13 +196,24 @@ impl RoleService for DefaultRoleService {
     }
 
     async fn find_by_id(&self, request: GetRoleRequest) -> Result<RoleResponse> {
+        let cache_key = Self::detail_cache_key(request.id);
+
+        if let Some(cached) = self.cache.get_json::<RoleResponse>(&cache_key).await {
+            return Ok(cached);
+        }
+
         let role = self
             .repository
             .find_by_id(request.id)
             .await?
             .ok_or_else(|| anyhow!("Role not found"))?;
 
-        Ok(self.map_response(role))
+        let response = self.map_response(role);
+        self.cache
+            .set_json(&cache_key, &response, Some(ROLE_DETAIL_TTL))
+            .await;
+
+        Ok(response)
     }
 
     async fn list(&self, request: ListRoleRequest) -> Result<RoleListResponse> {

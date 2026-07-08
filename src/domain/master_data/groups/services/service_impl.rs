@@ -1,31 +1,38 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use chrono::Utc;
 
-use crate::domain::{
-    audit_log::{
-        entity::audit_action,
-        services::{AuditLogService, RecordAuditLogInput},
-    },
-    master_data::{
-        groups::{
-            dto::{
-                CreateMasterDataGroupRequest, ListMasterDataGroupRequest,
-                MasterDataGroupListResponse, MasterDataGroupResponse, UpdateMasterDataGroupRequest,
-            },
-            entity::{MasterDataGroup, MasterDataGroupFilter},
-            repository::MasterDataGroupRepository,
-            services::MasterDataGroupService,
+use crate::{
+    domain::{
+        audit_log::{
+            entity::audit_action,
+            services::{AuditLogService, RecordAuditLogInput},
         },
-        items::repository::MasterDataItemsRepository,
+        master_data::{
+            groups::{
+                dto::{
+                    CreateMasterDataGroupRequest, ListMasterDataGroupRequest,
+                    MasterDataGroupListResponse, MasterDataGroupResponse,
+                    UpdateMasterDataGroupRequest,
+                },
+                entity::{MasterDataGroup, MasterDataGroupFilter},
+                repository::MasterDataGroupRepository,
+                services::MasterDataGroupService,
+            },
+            items::repository::MasterDataItemsRepository,
+        },
     },
+    infrastructure::cache::CacheHelper,
 };
+
+const MASTER_DATA_GROUP_TTL: Duration = Duration::from_secs(300);
 
 pub struct DefaultMasterDataGroupService {
     repository: Arc<dyn MasterDataGroupRepository>,
     item_repository: Arc<dyn MasterDataItemsRepository>,
+    cache: CacheHelper,
     audit_log_service: Arc<dyn AuditLogService>,
 }
 
@@ -33,13 +40,19 @@ impl DefaultMasterDataGroupService {
     pub fn new(
         repository: Arc<dyn MasterDataGroupRepository>,
         item_repository: Arc<dyn MasterDataItemsRepository>,
+        cache: CacheHelper,
         audit_log_service: Arc<dyn AuditLogService>,
     ) -> Self {
         Self {
             repository,
             audit_log_service,
+            cache,
             item_repository,
         }
+    }
+
+    fn group_cache_key(code: &str) -> String {
+        format!("master_data_group:code:{code}")
     }
 
     fn map_group(&self, group: MasterDataGroup) -> MasterDataGroupResponse {
@@ -56,10 +69,23 @@ impl DefaultMasterDataGroupService {
     }
 
     async fn require_group(&self, code: &str) -> Result<MasterDataGroup> {
-        self.repository
+        let cache_key = Self::group_cache_key(code);
+
+        if let Some(cached) = self.cache.get_json::<MasterDataGroup>(&cache_key).await {
+            return Ok(cached);
+        }
+
+        let group = self
+            .repository
             .find_group_by_code(code)
             .await?
-            .ok_or_else(|| anyhow!("Master data group '{code}' not found"))
+            .ok_or_else(|| anyhow!("Master data group '{code}' not found"))?;
+
+        self.cache
+            .set_json(&cache_key, &group, Some(MASTER_DATA_GROUP_TTL))
+            .await;
+
+        Ok(group)
     }
 
     async fn create_group_inner(&self, request: &CreateMasterDataGroupRequest) -> Result<u64> {
@@ -155,6 +181,10 @@ impl MasterDataGroupService for DefaultMasterDataGroupService {
     ) -> Result<()> {
         let result = self.update_group_inner(code, &request).await;
 
+        if result.is_ok() {
+            self.cache.invalidate(&Self::group_cache_key(code)).await;
+        }
+
         self.audit_log_service
             .record(RecordAuditLogInput {
                 actor_id,
@@ -184,6 +214,10 @@ impl MasterDataGroupService for DefaultMasterDataGroupService {
         user_agent: Option<String>,
     ) -> Result<()> {
         let result = self.delete_group_inner(code).await;
+
+        if result.is_ok() {
+            self.cache.invalidate(&Self::group_cache_key(code)).await;
+        }
 
         self.audit_log_service
             .record(RecordAuditLogInput {
