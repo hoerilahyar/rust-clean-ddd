@@ -10,13 +10,9 @@ use serde_json::Value;
 use std::collections::HashMap;
 use validator::Validate;
 
-pub struct ValidatedJson<T>(pub T);
+use crate::common::extractor::RequiredFields;
 
-pub trait RequiredFields {
-    fn required_fields() -> &'static [&'static str] {
-        &[]
-    }
-}
+pub struct ValidatedJson<T>(pub T);
 
 #[derive(Debug, Serialize)]
 struct ErrorResponse {

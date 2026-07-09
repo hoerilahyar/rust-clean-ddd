@@ -6,7 +6,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use crate::bootstrap::state::AppState;
 use crate::middleware::auth::authenticate;
-use crate::middleware::{compression, cors, request_id, timeout, trace};
+use crate::middleware::{compression, cors, request_id, request_logging, timeout, trace};
 
 pub fn create_router(state: AppState) -> Router {
     let (set_request_id, propagate_request_id) = request_id::layers();
@@ -18,6 +18,7 @@ pub fn create_router(state: AppState) -> Router {
         .layer(cors_layer)
         .layer(compression::layer())
         .layer(timeout::layer())
+        .layer(axum::middleware::from_fn(request_logging::log_requests))
         .layer(propagate_request_id);
 
     let protected = crate::routes::api::protected_routes()

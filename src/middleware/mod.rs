@@ -5,6 +5,7 @@ pub mod cors;
 pub mod rate_limit;
 pub mod recovery;
 pub mod request_id;
+pub mod request_logging;
 pub mod role;
 pub mod timeout;
 pub mod trace;
