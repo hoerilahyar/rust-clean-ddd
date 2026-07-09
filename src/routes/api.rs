@@ -9,7 +9,12 @@ use crate::{
 };
 
 pub fn public_routes() -> Router<AppState> {
-    Router::new().nest("/auth", auth::routes::router())
+    Router::new()
+        .route(
+            "/health",
+            axum::routing::get(crate::routes::health::health_check),
+        )
+        .nest("/auth", auth::routes::router())
 }
 
 pub fn protected_routes() -> Router<AppState> {

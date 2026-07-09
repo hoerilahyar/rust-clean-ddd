@@ -4,7 +4,7 @@ use validator::Validate;
 
 use crate::common::extractor::RequiredFields;
 
-#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
 pub struct LoginRequest {
     #[validate(length(min = 1))]
     pub identity: String,

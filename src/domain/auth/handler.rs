@@ -62,7 +62,7 @@ pub async fn login(
     let response = state
         .services
         .auth
-        .login(request, ip_address.clone(), user_agent.clone())
+        .login(request.clone(), ip_address.clone(), user_agent.clone())
         .await
         .map_err(|e| {
             warn!(
