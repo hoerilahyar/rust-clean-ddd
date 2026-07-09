@@ -6,6 +6,7 @@ use sqlx::MySqlPool;
 use crate::{
     config::Config,
     domain::{
+        api_key::services::ApiKeyService,
         audit_log::services::AuditLogService,
         auth::services::AuthService,
         authorization::services::AuthorizationService,
@@ -51,6 +52,7 @@ pub struct Services {
     pub session: Arc<dyn SessionService>,
     pub master_group: Arc<dyn MasterDataGroupService>,
     pub master_items: Arc<dyn MasterDataItemsService>,
+    pub api_key: Arc<dyn ApiKeyService>,
 }
 
 #[derive(Clone)]

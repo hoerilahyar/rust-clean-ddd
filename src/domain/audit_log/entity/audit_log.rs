@@ -55,6 +55,13 @@ pub mod audit_action {
     pub const MASTER_DATA_ITEM_CREATED: &str = "master_data.item_created";
     pub const MASTER_DATA_ITEM_UPDATED: &str = "master_data.item_updated";
     pub const MASTER_DATA_ITEM_DELETED: &str = "master_data.item_deleted";
+
+    pub const API_KEY_CREATED: &str = "api_key.created";
+    pub const API_KEY_UPDATED: &str = "api_key.updated";
+    pub const API_KEY_ACTIVATED: &str = "api_key.activated";
+    pub const API_KEY_DEACTIVATED: &str = "api_key.deactivated";
+    pub const API_KEY_DELETED: &str = "api_key.deleted";
+    pub const API_KEY_USED: &str = "api_key.used";
 }
 
 pub mod audit_status {

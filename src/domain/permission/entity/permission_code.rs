@@ -49,6 +49,12 @@ pub enum PermissionCode {
     MasterDataItemRead,
     MasterDataItemUpdate,
     MasterDataItemDelete,
+
+    ApiKeyCreate,
+    ApiKeyRead,
+    ApiKeyUpdate,
+    ApiKeyRevoke,
+    ApiKeyDelete,
 }
 
 impl PermissionCode {
@@ -103,6 +109,12 @@ impl PermissionCode {
             Self::MasterDataItemRead => "MASTER_DATA_ITEM_READ",
             Self::MasterDataItemUpdate => "MASTER_DATA_ITEM_UPDATE",
             Self::MasterDataItemDelete => "MASTER_DATA_ITEM_DELETE",
+
+            Self::ApiKeyCreate => "API_KEY_CREATE",
+            Self::ApiKeyRead => "API_KEY_READ",
+            Self::ApiKeyUpdate => "API_KEY_UPDATE",
+            Self::ApiKeyRevoke => "API_KEY_REVOKE",
+            Self::ApiKeyDelete => "API_KEY_DELETE",
         }
     }
 }

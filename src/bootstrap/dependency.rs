@@ -6,6 +6,7 @@ use crate::{
     bootstrap::state::{AppState, Infrastructure, Services},
     config::Config,
     domain::{
+        api_key::{repository::MySqlApiKeyRepository, services::DefaultApiKeyService},
         audit_log::{repository::MySqlAuditLogRepository, services::DefaultAuditLogService},
         auth::{repository::mysql_repository::MySqlAuthRepository, services::DefaultAuthService},
         authorization::{
@@ -75,6 +76,7 @@ pub async fn build_state() -> Result<AppState> {
     let master_data_items_repo =
         Arc::new(MySqlMasterDataItemsRepository::new(Arc::new(db.clone())));
     let session_auth_repository = auth_repository.clone();
+    let api_key_repo = Arc::new(MySqlApiKeyRepository::new(Arc::new(db.clone())));
 
     // infrastructure service
     let jwt = Arc::new(JwtService::new(&config));
@@ -149,6 +151,11 @@ pub async fn build_state() -> Result<AppState> {
         cache.clone(),
         audit_log_service.clone(),
     ));
+    let api_key_service = Arc::new(DefaultApiKeyService::new(
+        api_key_repo,
+        cache.clone(),
+        audit_log_service.clone(),
+    ));
 
     let infra = Infrastructure {
         db,
@@ -178,6 +185,7 @@ pub async fn build_state() -> Result<AppState> {
             session: session_service,
             master_group: master_data_group_service,
             master_items: master_data_items_service,
+            api_key: api_key_service,
         },
     })
 }
