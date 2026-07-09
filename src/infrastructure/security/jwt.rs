@@ -10,6 +10,7 @@ pub struct JwtService {
     encoding: EncodingKey,
     decoding: DecodingKey,
     issuer: String,
+    app_name: String,
     access_expired: u64,
     refresh_expired: u64,
 }
@@ -20,6 +21,7 @@ impl JwtService {
             encoding: EncodingKey::from_secret(config.jwt.secret.as_bytes()),
             decoding: DecodingKey::from_secret(config.jwt.secret.as_bytes()),
             issuer: config.jwt.issuer.clone(),
+            app_name: config.app.name.clone(),
             access_expired: config.jwt.access_token_expired,
             refresh_expired: config.jwt.refresh_token_expired,
         }
@@ -67,7 +69,11 @@ impl JwtService {
         &self,
         token: &str,
     ) -> Result<AccessClaims, jsonwebtoken::errors::Error> {
-        Ok(decode::<AccessClaims>(token, &self.decoding, &Validation::default())?.claims)
+        let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
+        validation.set_issuer(&[self.issuer.clone()]);
+        validation.set_audience(&[self.app_name.clone()]); // Add audience
+
+        Ok(decode::<AccessClaims>(token, &self.decoding, &validation)?.claims)
     }
 
     pub fn verify_refresh_token(

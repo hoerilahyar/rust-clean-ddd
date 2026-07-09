@@ -10,11 +10,12 @@ use crate::middleware::{compression, cors, request_id, timeout, trace};
 
 pub fn create_router(state: AppState) -> Router {
     let (set_request_id, propagate_request_id) = request_id::layers();
+    let cors_layer = cors::layer(&state.config.cors);
 
     let middleware_stack = ServiceBuilder::new()
         .layer(set_request_id)
         .layer(trace::layer())
-        .layer(cors::layer())
+        .layer(cors_layer)
         .layer(compression::layer())
         .layer(timeout::layer())
         .layer(propagate_request_id);

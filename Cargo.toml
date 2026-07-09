@@ -114,3 +114,10 @@ reqwest = { version = "0.12", default-features = false, features = [
   "multipart",
   "rustls-tls",
 ] }
+
+# [cors]
+# # Development
+# allow_credentials = true
+# allow_origin = "*"
+# allow_methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+# allow_headers = ["Content-Type", "Authorization", "X-Request-ID"]

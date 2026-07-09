@@ -10,14 +10,18 @@ pub async fn start(state: AppState) -> Result<()> {
     let port = state.config.app.port;
 
     let listener = TcpListener::bind(format!("{host}:{port}")).await?;
+    tracing::info!("Server running on http://{}:{}", host, port);
 
-    println!("Server running on http://{}:{}", host, port);
-
-    axum::serve(
+    let server = axum::serve(
         listener,
         create_router(state).into_make_service_with_connect_info::<SocketAddr>(),
-    )
-    .await?;
+    );
 
+    let shutdown = async {
+        tokio::signal::ctrl_c().await.ok();
+        tracing::info!("Shutdown signal received");
+    };
+
+    server.with_graceful_shutdown(shutdown).await?;
     Ok(())
 }
